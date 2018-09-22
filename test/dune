@@ -1,0 +1,6 @@
+(executable
+    (name test)
+    (public_name runtest)
+    (libraries
+        Reactify
+            ))
