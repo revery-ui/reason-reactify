@@ -1,0 +1,28 @@
+{
+  "name": "reason-reactify",
+  "version": "0.1.0",
+  "description": "Reason workflow with Esy",
+  "license": "MIT",
+  "esy": {
+    "build": "refmterr dune build -p #{self.name}",
+    "buildsInSource": "_build"
+  },
+  "dependencies": {
+    "@opam/dune": "*",
+    "@opam/lambda-term": "*",
+    "@opam/lwt": "*",
+    "@esy-ocaml/reason": "*",
+    "refmterr": "*",
+    "ocaml": "~4.6.0"
+  },
+  "resolutions": {
+    "@esy-ocaml/reason": "github:facebook/reason#8645aec",
+    "@esy-ocaml/esy-installer": "0.0.1",
+    "@opam/menhir": "20171013",
+    "@opam/re": "1.8.0"
+  },
+  "devDependencies": {
+    "@esy-ocaml/merlin": "*",
+    "ocaml": "~4.6.0"
+  }
+}
