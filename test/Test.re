@@ -1,64 +1,64 @@
 /** Simple test cases */
-
 open TestReconciler;
+open TestUtility;
 
+/* Use our Reconciler to create our own instance */
 module TestReact = Reactify.Make(TestReconciler);
 
-let rootNode: TestReconciler.node = {
-    children: ref([]),
-    nodeType: Root
-};
+let createRootNode = () => {children: ref([]), nodeType: Root};
 
-let aComponent = (~testVal, ~children, ()) => TestReact.primitiveComponent(A(testVal), ~children);
-let bComponent = (~children, ()) => TestReact.primitiveComponent(B, ~children);
-let cComponent = (~children, ()) => TestReact.primitiveComponent(C, ~children);
+let aComponent = (~testVal, ~children, ()) =>
+  TestReact.primitiveComponent(A(testVal), ~children);
+let bComponent = (~children, ()) =>
+  TestReact.primitiveComponent(B, ~children);
+let cComponent = (~children, ()) =>
+  TestReact.primitiveComponent(C, ~children);
 
-let component = () => {
-    <aComponent testVal={1}>
-        <bComponent />
-        <bComponent>
-            <cComponent />
-        </bComponent>
-    </aComponent>
+let component = () =>
+  <aComponent testVal=1>
+    <bComponent />
+    <bComponent> <cComponent /> </bComponent>
+  </aComponent>;
+
+module BasicRenderTest {
+   let rootNode = createRootNode(); 
+
+   TestReact.render(rootNode, <bComponent />);
+
+   let expectedStructure = TreeNode(Root, [TreeLeaf(B)]);
+   validateStructure(rootNode, expectedStructure);
 }
 
-TestReact.render(rootNode, component());
 
-open TestReconciler;
+/*
+module UpdateNodeTest {
+   let rootNode = createRootNode(); 
 
-type tree('a) =
-    | TreeNode('a, list(tree('a)))
-    | TreeLeaf('a);
+   TestReact.render(rootNode, <aComponent testVal={1}/>);
 
-let expectedStructure: tree(primitives) = TreeNode(Root, 
-                             [TreeNode(
-        A(1), [
-         TreeLeaf(B),
-         TreeNode(B, [TreeLeaf(C)])
-        ])
-                             ]
-);
+   let expectedStructure = TreeNode(Root, [TreeLeaf(A(1))]);
+   validateStructure(rootNode, expectedStructure);
 
-let validateStructure = (rootNode: node , structure: tree(primitives)) => {
-    let rec f = (inputNode: node, st: tree(primitives), level) => {
-        switch (st) {
-        | TreeNode(p, c) => {
-            assert(inputNode.nodeType == p);
-            assert(List.length(inputNode.children^) == List.length(c));
+   /* Now, we'll update the tree */
+   TestReact.render(rootNode, <aComponent testVal={2}/>);
 
-            List.iter2((a, b) => f(a, b, level + 1), inputNode.children^, c)
-        }
-        | TreeLeaf(p) => {
-            assert(inputNode.nodeType == p);
-        };
-    };
-    };
+   let expectedStructure = TreeNode(Root, [TreeLeaf(A(2))]);
+   validateStructure(rootNode, expectedStructure);
+}
+*/
 
-    f(rootNode, structure, 0);
-};
+module RenderingChildrenTest {
+    let rootNode = createRootNode();
 
-validateStructure(rootNode, expectedStructure);
+    let expectedStructure: tree(primitives) =
+      TreeNode(
+        Root,
+        [TreeNode(A(1), [TreeLeaf(B), TreeNode(B, [TreeLeaf(C)])])],
+      );
 
-TestReact.render(rootNode, component());
+    TestReact.render(rootNode, component());
+
+    validateStructure(rootNode, expectedStructure);
+}
 
 /* TODO: validateStructure(rootNode, expectedStructure); */

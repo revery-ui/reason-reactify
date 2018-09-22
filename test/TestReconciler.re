@@ -4,47 +4,43 @@
  * useful for testing the basic functionality
 */
 
-module TestReconciler = {
-    type recordType = {
-        testVal: int
+type recordType = {
+    testVal: int
+};
+
+type primitives = 
+    | Root
+    | A(int)
+    | B
+    | C
+    | D(recordType);
+
+type node = {
+    children: ref(list(node)),
+    nodeType: primitives,
+};
+
+let createInstance = (prim) => {
+    print_endline ("create instance called");
+    {
+        children: ref([]),
+        nodeType: prim
     };
+};
 
-    type primitives = 
-        | Root
-        | A(int)
-        | B
-        | C
-        | D(recordType);
+let appendChild = (parent, child) => {
+    parent.children := parent.children^ @ [child];
+    print_endline("append child - new count: " ++ string_of_int(List.length(parent.children^)));
+};
 
-    type node = {
-        children: ref(list(node)),
-        nodeType: primitives,
-    };
+let removeChild = () => {
+    print_endline("remove child");
+};
 
-    let createInstance = (prim) => {
-        print_endline ("create instance called");
-        {
-            children: ref([]),
-            nodeType: prim
-        };
-    };
+let updateInstance = () => {
+    print_endline ("update element");
+};
 
-    let appendChild = (parent, child) => {
-        parent.children := parent.children^ @ [child];
-        print_endline("append child - new count: " ++ string_of_int(List.length(parent.children^)));
-    };
-
-    let removeChild = () => {
-        print_endline("remove child");
-    };
-
-    let updateInstance = () => {
-        print_endline ("update element");
-    };
-}
-
-/* Some experiments */
-open TestReconciler;
 
 let a11 = A(1);
 let a12 = A(1);
