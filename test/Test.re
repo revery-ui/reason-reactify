@@ -20,45 +20,61 @@ let component = () =>
     <bComponent> <cComponent /> </bComponent>
   </aComponent>;
 
-module BasicRenderTest {
-   let rootNode = createRootNode(); 
+module BasicRenderTest = {
+  let rootNode = createRootNode();
 
-   TestReact.render(rootNode, <bComponent />);
+  TestReact.render(rootNode, <bComponent />);
 
-   let expectedStructure = TreeNode(Root, [TreeLeaf(B)]);
-   validateStructure(rootNode, expectedStructure);
-}
-
+  let expectedStructure = TreeNode(Root, [TreeLeaf(B)]);
+  validateStructure(rootNode, expectedStructure);
+};
 
 /*
-module UpdateNodeTest {
-   let rootNode = createRootNode(); 
-
-   TestReact.render(rootNode, <aComponent testVal={1}/>);
-
-   let expectedStructure = TreeNode(Root, [TreeLeaf(A(1))]);
-   validateStructure(rootNode, expectedStructure);
-
-   /* Now, we'll update the tree */
-   TestReact.render(rootNode, <aComponent testVal={2}/>);
-
-   let expectedStructure = TreeNode(Root, [TreeLeaf(A(2))]);
-   validateStructure(rootNode, expectedStructure);
-}
-*/
-
-module RenderingChildrenTest {
+ module UpdateNodeTest {
     let rootNode = createRootNode();
 
-    let expectedStructure: tree(primitives) =
-      TreeNode(
-        Root,
-        [TreeNode(A(1), [TreeLeaf(B), TreeNode(B, [TreeLeaf(C)])])],
-      );
+    TestReact.render(rootNode, <aComponent testVal={1}/>);
 
-    TestReact.render(rootNode, component());
-
+    let expectedStructure = TreeNode(Root, [TreeLeaf(A(1))]);
     validateStructure(rootNode, expectedStructure);
-}
+
+    /* Now, we'll update the tree */
+    TestReact.render(rootNode, <aComponent testVal={2}/>);
+
+    let expectedStructure = TreeNode(Root, [TreeLeaf(A(2))]);
+    validateStructure(rootNode, expectedStructure);
+ }
+ */
+
+/*
+ module ReplaceNodeTest {
+    let rootNode = createRootNode();
+
+    TestReact.render(rootNode, <aComponent testVal={1}/>);
+
+    let expectedStructure = TreeNode(Root, [TreeLeaf(A(1))]);
+    validateStructure(rootNode, expectedStructure);
+
+    /* Now, we'll update the tree */
+    TestReact.render(rootNode, <bComponent/>);
+
+    let expectedStructure = TreeNode(Root, [TreeLeaf(B)]);
+    validateStructure(rootNode, expectedStructure);
+ }
+ */
+
+module RenderingChildrenTest = {
+  let rootNode = createRootNode();
+
+  let expectedStructure: tree(primitives) =
+    TreeNode(
+      Root,
+      [TreeNode(A(1), [TreeLeaf(B), TreeNode(B, [TreeLeaf(C)])])],
+    );
+
+  TestReact.render(rootNode, component());
+
+  validateStructure(rootNode, expectedStructure);
+};
 
 /* TODO: validateStructure(rootNode, expectedStructure); */
