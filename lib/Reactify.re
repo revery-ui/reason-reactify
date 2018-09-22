@@ -7,9 +7,9 @@ module type Reconciler = {
 
     let createInstance: (primitives) => node;
 
-    let removeChild: (node, node) => unit;
+    let removeChild: unit /* TODO (node, node)*/ => unit;
 
-    let updateInstance: (node, primitives) => unit;
+    let updateInstance: unit /* TODO: (node, primitives) */ => unit;
 };
 
 module Make = (ReconcilerImpl : Reconciler) => {

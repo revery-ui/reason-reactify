@@ -1,6 +1,9 @@
 (executable
-    (name test)
-    (public_name runtest)
+    (name Test)
     (libraries
-        Reactify
+        reactify
             ))
+
+(alias
+    (name runtest)
+    (action (run ./Test.exe)))
