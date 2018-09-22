@@ -33,7 +33,9 @@ let appendChild = (parent, child) => {
     print_endline("append child - new count: " ++ string_of_int(List.length(parent.children^)));
 };
 
-let removeChild = (_, _) => {
+let removeChild = (parent, child) => {
+    parent.children := List.filter((c) => c != child, parent.children^);
+
     print_endline("remove child");
 };
 
@@ -41,7 +43,9 @@ let updateInstance = () => {
     print_endline ("update element");
 };
 
-let replaceChild = (_, _, _) => {
+let replaceChild = (parent, newChild, oldChild) => {
+    removeChild(parent, oldChild);
+    appendChild(parent, newChild);
     print_endline ("replace child");
 };
 

@@ -21,14 +21,14 @@ let component = () =>
   </aComponent>;
 
 
-module BasicRenderTest = {
-  let rootNode = createRootNode();
+/* module BasicRenderTest = { */
+/*   let rootNode = createRootNode(); */
 
-  TestReact.render(rootNode, <bComponent />);
+/*   TestReact.render(rootNode, <bComponent />); */
 
-  let expectedStructure = TreeNode(Root, [TreeLeaf(B)]);
-  validateStructure(rootNode, expectedStructure);
-};
+/*   let expectedStructure = TreeNode(Root, [TreeLeaf(B)]); */
+/*   validateStructure(rootNode, expectedStructure); */
+/* }; */
 
 
 
@@ -49,7 +49,7 @@ module BasicRenderTest = {
 
 
 
-  /*
+
  module ReplaceNodeTest {
     let rootNode = createRootNode();
 
@@ -64,7 +64,7 @@ module BasicRenderTest = {
 
     let expectedStructure = TreeNode(Root, [TreeLeaf(B)]);
     validateStructure(rootNode, expectedStructure);
- }*/
+ }
 
 /*
 module RenderingChildrenTest = {
