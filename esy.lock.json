@@ -1,5 +1,5 @@
 {
-  "hash": "f07564cc200ff081fcfda980eb50c2d9",
+  "hash": "a045694021e4920bf31bfa11b3b72bfa",
   "root": "reason-reactify@path:.",
   "node": {
     "refmterr@3.1.7": {
@@ -16,17 +16,6 @@
         "@opam/jbuilder@opam:transition", "@opam/re@opam:1.8.0"
       ]
     },
-    "ocaml@4.6.6": {
-      "record": {
-        "name": "ocaml",
-        "version": "4.6.6",
-        "source":
-          "archive:https://registry.npmjs.org/ocaml/-/ocaml-4.6.6.tgz#sha1:769f01e91dd1492b17420fdb00be14dda3451134",
-        "files": [],
-        "opam": null
-      },
-      "dependencies": []
-    },
     "reason-reactify@path:.": {
       "record": {
         "name": "reason-reactify",
@@ -38,9 +27,20 @@
       "dependencies": [
         "@esy-ocaml/merlin@3.0.5005",
         "@esy-ocaml/reason@github:facebook/reason#8645aec",
-        "@opam/dune@opam:1.2.1", "@opam/lambda-term@opam:1.13",
-        "@opam/lwt@opam:4.1.0", "ocaml@4.6.6", "refmterr@3.1.7"
+        "@opam/dune@opam:1.2.1", "@opam/lwt@opam:4.1.0", "ocaml@4.6.6",
+        "refmterr@3.1.7"
       ]
+    },
+    "ocaml@4.6.6": {
+      "record": {
+        "name": "ocaml",
+        "version": "4.6.6",
+        "source":
+          "archive:https://registry.npmjs.org/ocaml/-/ocaml-4.6.6.tgz#sha1:769f01e91dd1492b17420fdb00be14dda3451134",
+        "files": [],
+        "opam": null
+      },
+      "dependencies": []
     },
     "@opam/zed@opam:1.6": {
       "record": {

@@ -9,10 +9,8 @@
   },
   "dependencies": {
     "@opam/dune": "*",
-    "@opam/lambda-term": "*",
     "@opam/lwt": "*",
     "@esy-ocaml/reason": "*",
-    "refmterr": "*",
     "ocaml": "~4.6.0"
   },
   "resolutions": {
@@ -23,6 +21,7 @@
   },
   "devDependencies": {
     "@esy-ocaml/merlin": "*",
-    "ocaml": "~4.6.0"
+    "ocaml": "~4.6.0",
+    "refmterr": "*"
   }
 }
