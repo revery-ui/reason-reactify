@@ -1,5 +1,14 @@
 open TestReconciler;
 
+let assertIntEqual = (actual, expected, msg) => {
+    if (actual == expected) {
+        print_endline("[PASS] " ++ msg ++ "[expected: " ++ string_of_int(expected) ++ ", actual: " ++ string_of_int(actual) ++ "]");
+    } else {
+        print_endline("[FAIL] " ++ msg ++ "[expected: " ++ string_of_int(expected) ++ ", actual: " ++ string_of_int(actual) ++ "]");
+    }
+    assert(actual == expected);
+};
+
 type tree('a) =
     | TreeNode('a, list(tree('a)))
     | TreeLeaf('a);
@@ -9,7 +18,7 @@ let validateStructure = (rootNode: node , structure: tree(primitives)) => {
         switch (st) {
         | TreeNode(p, c) => {
             assert(inputNode.nodeType == p);
-            assert(List.length(inputNode.children^) == List.length(c));
+            assertIntEqual(List.length(inputNode.children^), List.length(c), "Validating children tree at level: " ++ string_of_int(level));
 
             List.iter2((a, b) => f(a, b, level + 1), inputNode.children^, c)
         }

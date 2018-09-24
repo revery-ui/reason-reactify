@@ -30,6 +30,7 @@ module type Reconciler = {
 module Make = (ReconcilerImpl: Reconciler) => {
   type element =
     | Primitive(ReconcilerImpl.primitives)
+    | Component(component)
   and renderedElement =
     | RenderedPrimitive(ReconcilerImpl.node)
   and elementWithChildren = (element, childComponents)
@@ -42,6 +43,19 @@ module Make = (ReconcilerImpl: Reconciler) => {
     childInstances,
   }
   and childInstances = list(instance);
+
+  type container = {
+       rootInstance: ref(option(instance)),
+       rootNode: ReconcilerImpl.node,
+  };
+
+  let createContainer = (rootNode: ReconcilerImpl.node) => {
+       let ret: container = {
+            rootNode,
+            rootInstance: ref(None)
+        };
+      ret;
+  };
 
   let primitiveComponent = (prim, ~children) => {
     let comp: component = {
@@ -56,23 +70,34 @@ module Make = (ReconcilerImpl: Reconciler) => {
     comp;
   };
 
-  let rootInstance: ref(option(instance)) = ref(None);
-
   let rec instantiate = (rootNode, component) => {
     let (element, children) = component.render(); 
 
     let primitiveInstance =
         switch (element) {
         | Primitive(p) => Some(ReconcilerImpl.createInstance(p))
+        | _ => None
         };
 
     let nextRootPrimitiveInstance =
       switch (primitiveInstance) {
       | Some(i) => i
       | None => rootNode
-      };    
-    
+      };
+
     let childInstances = List.map(instantiate(nextRootPrimitiveInstance), children);
+
+    let appendIfInstance = (ci) => {
+        switch (ci.node) {
+        | Some(s) => {
+                print_endline("-appendIfIsntance: appending!");
+                ReconcilerImpl.appendChild(nextRootPrimitiveInstance, s)
+        }
+        | _ => ()
+        }
+    };
+  
+    List.iter(appendIfInstance, childInstances);
 
     let instance = {
        component,
@@ -85,9 +110,11 @@ module Make = (ReconcilerImpl: Reconciler) => {
   };
 
   let reconcile = (rootNode, instance, component) => {
-      switch (instance) {
+      print_endline("start reconcile");
+      let r = switch (instance) {
         | None => {
             let newInstance = instantiate(rootNode, component);
+            print_endline(" - new ROOT instance!");
 
             switch(newInstance.node) {
             | Some(n) => ReconcilerImpl.appendChild(rootNode, n)
@@ -97,7 +124,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
             newInstance
         }
         | Some(i) => {
-            let newInstance = instantiate(rootNode, component);     
+            let newInstance = instantiate(rootNode, component);
+            print_endline(" - replace ROOT instance!");
 
             switch((newInstance.node, i.node)) {
             | (Some(a), Some(b)) => ReconcilerImpl.replaceChild(rootNode, a, b)
@@ -109,37 +137,14 @@ module Make = (ReconcilerImpl: Reconciler) => {
             newInstance
         }
       };
+      print_endline("end reconcile");
+      r;
   };
 
-  let render = (rootNode: ReconcilerImpl.node, component) => {
-      let prevInstance = rootInstance^;
-      let nextInstance = reconcile(rootNode, prevInstance, component);
-      rootInstance := Some(nextInstance);
-
+  let updateContainer = (container, component) => {
+    let {rootNode, rootInstance} = container;
+    let prevInstance = rootInstance^;
+    let nextInstance = reconcile(rootNode, prevInstance, component);
+    rootInstance := Some(nextInstance);
   };
-
-      /*
-    let (element, children) = input.render();
-
-    let primitiveInstance =
-      switch (element) {
-      | Primitive(p) => Some(ReconcilerImpl.createInstance(p))
-      };
-
-    let nextRootPrimitiveInstance =
-      switch (primitiveInstance) {
-      | Some(i) => i
-      | None => rootNode
-      };
-
-    let renderChild = (i: component) => render(nextRootPrimitiveInstance, i);
-
-    List.iter(renderChild, children);
-
-    switch (primitiveInstance) {
-    | Some(p) => ReconcilerImpl.appendChild(rootNode, p)
-    | _ => ()
-    };
-
-    print_endline("Render called!"); */
 };
