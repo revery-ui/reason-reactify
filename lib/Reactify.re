@@ -30,7 +30,7 @@ module type Reconciler = {
 module Make = (ReconcilerImpl: Reconciler) => {
   type element =
     | Primitive(ReconcilerImpl.primitives)
-    | Component(component)
+    | Component
   and renderedElement =
     | RenderedPrimitive(ReconcilerImpl.node)
   and elementWithChildren = (element, childComponents)
@@ -57,6 +57,21 @@ module Make = (ReconcilerImpl: Reconciler) => {
       ret;
   };
 
+  type wrappedComponent = {
+        render: unit => component,
+  };
+
+  let statelessComponent = (c: wrappedComponent, ~children: childComponents) => {
+        let ret: component = {
+            render: () => {
+                let children: list(component) = [c.render()];
+                let renderResult: elementWithChildren = (Component, children);
+                renderResult;
+           },
+       };
+       ret;
+  };
+
   let primitiveComponent = (prim, ~children) => {
     let comp: component = {
       render: () => {
@@ -70,8 +85,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
     comp;
   };
 
-  let rec instantiate = (rootNode, component) => {
-    let (element, children) = component.render(); 
+  let rec instantiate = (rootNode, component: component) => {
+    let (element, children) = component.render();
 
     let primitiveInstance =
         switch (element) {
