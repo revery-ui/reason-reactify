@@ -1,5 +1,11 @@
 open TestReconciler;
 
+let test = (msg, t) => {
+    print_endline ("[TEST] Begin " ++ msg);
+    t();
+    print_endline ("[TeST] End" ++ msg);
+};
+
 let assertIntEqual = (actual, expected, msg) => {
     if (actual == expected) {
         print_endline("[PASS] " ++ msg ++ "[expected: " ++ string_of_int(expected) ++ ", actual: " ++ string_of_int(actual) ++ "]");
