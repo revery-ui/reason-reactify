@@ -1,12 +1,11 @@
-- `createContainer` and `updateContainer` API, instead of previous API
-    - handle deltas from different root nodes
-
-- `createContainer (rootNode)`
-- `updateContainer (elements, rootNode)`
-
-- Non-primitive components
 - Stateful rendering
-- Key persistence
+    - Pass 'self' - hook up to reconcile instance + node
+    - self.state
+    - self.setState
+        - setState -> tap into reconciler at node level
+    - Where to store this value?
+
+- Key persistence -> testing with arrays!
 
 Examples:
 - Terminal

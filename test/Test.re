@@ -126,11 +126,23 @@ test("Rendering wrapped component with prop", () => {
   validateStructure(rootNode, expectedStructure);
 });
 
+let componentWithWrappedComponents = (~children, ()) => TestReact.statelessComponent({
+      render: () => <aComponent testVal=1>
+        <componentWrappingB />
+      </aComponent>
+}, ~children);
 
-/* let componentWithWrappedComponents = TestReact.statelessComponent({ */
-/*       render: () => <aComponent testVal=1> */
-/*         <componentWrappingB /> */
-/*       </aComponent> */
-/* }); */
+test("Rendering wrapped component with wrappedComponent as child prop", () => {
+  let rootNode = createRootNode();
+  let container = TestReact.createContainer(rootNode);
 
-/* TODO: validateStructure(rootNode, expectedStructure); */
+  let expectedStructure: tree(primitives) =
+    TreeNode(
+      Root,
+      [TreeNode(A(1), [TreeLeaf(B)])]
+    );
+
+  TestReact.updateContainer(container, <componentWithWrappedComponents />);
+
+  validateStructure(rootNode, expectedStructure);
+});
