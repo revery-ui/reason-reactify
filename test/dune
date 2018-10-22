@@ -1,6 +1,5 @@
 (executable
     (name Test)
-    (executable_flags (-linkall))
     (libraries
         reactify
             ))
