@@ -1,3 +1,5 @@
+Consolidate tests
+
 - Stateful rendering
     - Pass 'self' - hook up to reconcile instance + node
     - self.state
