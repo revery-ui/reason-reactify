@@ -123,7 +123,6 @@ module Make = (ReconcilerImpl: Reconciler) => {
                 /* Check if the primitive type is the same - if it is, we can simply update the node */
                 /* If not, we'll replace the node */
                 if (Utility.areConstructorsEqual(oldPrim, newPrim)) {
-                  print_endline("1!");
                   switch (newInstance.element) {
                   | Primitive(o) =>
                     ReconcilerImpl.updateInstance(b, o);
@@ -164,19 +163,13 @@ module Make = (ReconcilerImpl: Reconciler) => {
     r;
   }
   and reconcileChildren = (currentInstance: instance, newInstance: instance) => {
-    print_endline("reconcile children");
     let root = currentInstance.rootNode;
     let currentChildInstances = Array.of_list(currentInstance.childInstances);
     let newChildren = Array.of_list(newInstance.children);
 
     let newChildInstances = ref([]);
 
-    print_endline(
-      "new children length: " ++ string_of_int(Array.length(newChildren)),
-    );
-
     for (i in 0 to Array.length(newChildren) - 1) {
-      print_endline("reconcile children - iteration: " ++ string_of_int(i));
       let childInstance =
         i >= Array.length(currentChildInstances) ?
           None : Some(currentChildInstances[i]);
@@ -185,6 +178,14 @@ module Make = (ReconcilerImpl: Reconciler) => {
       newChildInstances :=
         List.append(newChildInstances^, [newChildInstance]);
     };
+
+    /* Clean up children */
+    for(i in Array.length(newChildren) to Array.length(currentChildInstances) - 1) {
+        switch (currentChildInstances[i].node) {
+        | Some(n) => ReconcilerImpl.removeChild(root, n)
+        | _ => ()
+        }
+    }
 
     newChildInstances^;
   };
