@@ -60,6 +60,10 @@ module Make = (ReconcilerImpl: Reconciler) => {
     comp;
   };
 
+  /*
+   * Instantiate turns a component function into a live instance,
+   * and asks the reconciler to append it to the root node.
+   */
   let rec instantiate = (rootNode, component) => {
     let (element, children) = component.render();
 
@@ -179,7 +183,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
         List.append(newChildInstances^, [newChildInstance]);
     };
 
-    /* Clean up children */
+    /* Clean up existing children */
     for(i in Array.length(newChildren) to Array.length(currentChildInstances) - 1) {
         switch (currentChildInstances[i].node) {
         | Some(n) => ReconcilerImpl.removeChild(root, n)
