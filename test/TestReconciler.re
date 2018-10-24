@@ -39,7 +39,7 @@ let printUpdate = (u) => {
 
 type node = {
     children: ref(list(node)),
-    nodeType: primitives,
+    mutable nodeType: primitives,
 };
 
 let getUpdates = () => {
@@ -52,7 +52,12 @@ let pushUpdate = (u) => {
 };
 
 let createInstance = (prim) => {
-    print_endline ("create instance called");
+
+    switch (prim) {
+    | A(_) =>print_endline ("create instance called: A");
+    | B =>print_endline ("create instance called: B");
+    | _ =>print_endline ("create instance called");
+    };
     let ret = {
         children: ref([]),
         nodeType: prim
@@ -72,8 +77,12 @@ let removeChild = (parent, child) => {
     pushUpdate(Remove);
 };
 
-let updateInstance = () => {
-    pushUpdate(Update);
+let updateInstance = (node, prim) => {
+    switch (prim) {
+    | A(x) => node.nodeType = A(x)
+    | _ => print_endline ("Unhandled primitive in updateInstance");
+    };
+    ();
 };
 
 let clearUpdates = () => {
