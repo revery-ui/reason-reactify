@@ -5,7 +5,7 @@ open TestUtility;
 /* Use our Reconciler to create our own instance */
 module TestReact = Reactify.Make(TestReconciler);
 
-let createRootNode = () => {children: ref([]), nodeType: Root};
+let createRootNode = () => {children: ref([]), nodeId: 0, nodeType: Root};
 
 let aComponent = (~testVal, ~children, ()) =>
   TestReact.primitiveComponent(A(testVal), ~children);
@@ -31,6 +31,7 @@ test("BasicRenderTest", () => {
   let container = TestReact.createContainer(rootNode);
 
   TestReact.updateContainer(container, <bComponent />);
+  TestReact.updateContainer(container, <bComponent />);
 
   let expectedStructure = TreeNode(Root, [TreeLeaf(B)]);
   validateStructure(rootNode, expectedStructure);
@@ -52,6 +53,60 @@ test("UpdateNodeTest", () => {
     validateStructure(rootNode, expectedStructure);
 });
 
+test("UpdateChildNodeTest", () => {
+    let rootNode = createRootNode();
+    let container = TestReact.createContainer(rootNode);
+
+    TestReact.updateContainer(container, <aComponent testVal={1}><aComponent testVal={2} /></aComponent>);
+
+    let expectedStructure = TreeNode(Root, [TreeNode(A(1), [TreeLeaf(A(2))])]);
+    validateStructure(rootNode, expectedStructure);
+
+    /* Now, we'll update the tree */
+    TestReact.updateContainer(container, <aComponent testVal={1}><aComponent testVal={3} /></aComponent>);
+
+    let expectedStructure = TreeNode(Root, [TreeNode(A(1), [TreeLeaf(A(3))])]);
+    validateStructure(rootNode, expectedStructure);
+});
+
+test("ReplaceChildNodeTest", () => {
+   let rootNode = createRootNode();
+   let container = TestReact.createContainer(rootNode);
+
+   TestReact.updateContainer(container, <aComponent testVal={1}><aComponent testVal={2} /></aComponent>);
+
+    let expectedStructure = TreeNode(Root, [TreeNode(A(1), [TreeLeaf(A(2))])]);
+   validateStructure(rootNode, expectedStructure);
+
+   /* Now, we'll update the tree */
+   print_endline ("going for the update....");
+   TestReact.updateContainer(container, <aComponent testVal={1}><bComponent /></aComponent>);
+
+    let expectedStructure = TreeNode(Root, [TreeNode(A(1), [TreeLeaf(B)])]);
+   validateStructure(rootNode, expectedStructure);
+});
+
+test("ReplaceChildrenWithLessChildrenTest", () => {
+   let rootNode = createRootNode();
+   let container = TestReact.createContainer(rootNode);
+
+   TestReact.updateContainer(container, <aComponent testVal={1}>
+            <bComponent/>
+            <bComponent/>
+            <bComponent/>
+        </aComponent>);
+
+    let expectedStructure = TreeNode(Root, [TreeNode(A(1), [TreeLeaf(B), TreeLeaf(B), TreeLeaf(B)])]);
+   validateStructure(rootNode, expectedStructure);
+
+   /* Now, we'll update the tree */
+   print_endline ("going for the update....");
+   TestReact.updateContainer(container, <aComponent testVal={1}><bComponent /></aComponent>);
+
+    let expectedStructure = TreeNode(Root, [TreeNode(A(1), [TreeLeaf(B)])]);
+   validateStructure(rootNode, expectedStructure);
+});
+
 test("ReplaceNodeTest", () => {
    let rootNode = createRootNode();
    let container = TestReact.createContainer(rootNode);
@@ -69,7 +124,6 @@ test("ReplaceNodeTest", () => {
    validateStructure(rootNode, expectedStructure);
 });
 
-
 test("RenderingChildrenTest", () => {
   let rootNode = createRootNode();
   let container = TestReact.createContainer(rootNode);
@@ -84,5 +138,3 @@ test("RenderingChildrenTest", () => {
 
   validateStructure(rootNode, expectedStructure);
 });
-
-/* TODO: validateStructure(rootNode, expectedStructure); */
