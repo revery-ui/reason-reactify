@@ -6,6 +6,7 @@
     - Where to store this value?
 
 - Key persistence -> testing with arrays!
+- Context
 
 Examples:
 - Terminal
