@@ -15,38 +15,79 @@ type primitives =
     | C
     | D(recordType);
 
+/*
+ * Keep a record of the updates - we'll use this for certain kinds of tests
+ */
+type updateType =
+    | Append
+    | Create
+    | Remove
+    | Update
+    | Replace
+
+let updates: ref(list(updateType)) = ref([]);
+
+let printUpdate = (u) => {
+    switch (u) {
+    | Append => print_endline("- append");
+    | Create => print_endline("- create");
+    | Remove => print_endline("- remove");
+    | Update => print_endline("- update");
+    | Replace => print_endline("- replace");
+    };
+};
+
 type node = {
     children: ref(list(node)),
     nodeType: primitives,
 };
 
+let getUpdates = () => {
+    updates^
+};
+
+let pushUpdate = (u) => {
+    updates := List.append(getUpdates(), [u]);
+    printUpdate(u);
+};
+
 let createInstance = (prim) => {
     print_endline ("create instance called");
-    {
+    let ret = {
         children: ref([]),
         nodeType: prim
     };
+    pushUpdate(Create);
+    ret;
 };
 
 let appendChild = (parent, child) => {
     parent.children := parent.children^ @ [child];
     print_endline("append child - new count: " ++ string_of_int(List.length(parent.children^)));
+    pushUpdate(Append);
 };
 
 let removeChild = (parent, child) => {
     parent.children := List.filter((c) => c != child, parent.children^);
-
-    print_endline("remove child");
+    pushUpdate(Remove);
 };
 
 let updateInstance = () => {
-    print_endline ("update element");
+    pushUpdate(Update);
+};
+
+let clearUpdates = () => {
+    updates := [];
+};
+
+let printUpdates = () => {
+    List.iter(printUpdate, getUpdates());
 };
 
 let replaceChild = (parent, newChild, oldChild) => {
     removeChild(parent, oldChild);
     appendChild(parent, newChild);
-    print_endline ("replace child");
+    pushUpdate(Replace);
 };
 
 

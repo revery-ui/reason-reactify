@@ -60,10 +60,6 @@ module Make = (ReconcilerImpl: Reconciler) => {
   let primitiveComponent = (prim, ~children) => {
     let comp: component = {
       render: () => {
-        print_endline(
-          "Rendering primitive! Children length: "
-          ++ string_of_int(List.length(children)),
-        );
         (Primitive(prim), children);
       },
     };
@@ -89,10 +85,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
     let appendIfInstance = (ci) => {
         switch (ci.node) {
-        | Some(s) => {
-                print_endline("-appendIfIsntance: appending!");
-                ReconcilerImpl.appendChild(nextRootPrimitiveInstance, s)
-        }
+        | Some(s) => ReconcilerImpl.appendChild(nextRootPrimitiveInstance, s)
         | _ => ()
         }
     };
@@ -104,17 +97,15 @@ module Make = (ReconcilerImpl: Reconciler) => {
        element,
        node: primitiveInstance,
        childInstances
-    }
+    };
 
     instance
   };
 
   let reconcile = (rootNode, instance, component) => {
-      print_endline("start reconcile");
       let r = switch (instance) {
         | None => {
             let newInstance = instantiate(rootNode, component);
-            print_endline(" - new ROOT instance!");
 
             switch(newInstance.node) {
             | Some(n) => ReconcilerImpl.appendChild(rootNode, n)
@@ -125,10 +116,13 @@ module Make = (ReconcilerImpl: Reconciler) => {
         }
         | Some(i) => {
             let newInstance = instantiate(rootNode, component);
-            print_endline(" - replace ROOT instance!");
 
             switch((newInstance.node, i.node)) {
-            | (Some(a), Some(b)) => ReconcilerImpl.replaceChild(rootNode, a, b)
+            | (Some(a), Some(b)) => 
+                /* Only both replacing node if the primitives are different */
+                if(newInstance.node != i.node) {
+                    ReconcilerImpl.replaceChild(rootNode, a, b)
+                }
             | (Some(a), None) => ReconcilerImpl.appendChild(rootNode, a)
             | (None, Some(b)) => ReconcilerImpl.removeChild(rootNode, b)
             | (None, None) => ()
@@ -137,7 +131,6 @@ module Make = (ReconcilerImpl: Reconciler) => {
             newInstance
         }
       };
-      print_endline("end reconcile");
       r;
   };
 

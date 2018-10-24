@@ -31,6 +31,7 @@ test("BasicRenderTest", () => {
   let container = TestReact.createContainer(rootNode);
 
   TestReact.updateContainer(container, <bComponent />);
+  TestReact.updateContainer(container, <bComponent />);
 
   let expectedStructure = TreeNode(Root, [TreeLeaf(B)]);
   validateStructure(rootNode, expectedStructure);
@@ -50,6 +51,23 @@ test("UpdateNodeTest", () => {
 
     let expectedStructure = TreeNode(Root, [TreeLeaf(A(2))]);
     validateStructure(rootNode, expectedStructure);
+});
+
+test("UpdateChildNodeTest", () => {
+    let rootNode = createRootNode();
+    let container = TestReact.createContainer(rootNode);
+
+    TestReact.updateContainer(container, <aComponent testVal={1}><aComponent testVal={2} /></aComponent>);
+
+    let expectedStructure = TreeNode(Root, [TreeNode(A(1), [TreeLeaf(A(2))])]);
+    validateStructure(rootNode, expectedStructure);
+
+    /* Now, we'll update the tree */
+    TestReact.updateContainer(container, <aComponent testVal={1}><aComponent testVal={3} /></aComponent>);
+
+    let expectedStructure = TreeNode(Root, [TreeNode(A(1), [TreeLeaf(A(3))])]);
+    validateStructure(rootNode, expectedStructure);
+   
 });
 
 test("ReplaceNodeTest", () => {
