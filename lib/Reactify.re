@@ -55,14 +55,12 @@ module Make = (ReconcilerImpl: Reconciler) => {
     ret;
   };
 
-  type wrappedComponent = {
-        render: unit => component,
-  };
+  type componentFunction = unit => component;
 
-  let statelessComponent = (c: wrappedComponent, ~children: childComponents) => {
+  let component = (c: componentFunction, ~children=[]) => {
         let ret: component = {
             render: () => {
-                let children: list(component) = [c.render()];
+                let children: list(component) = [c()];
                 let renderResult: elementWithChildren = (Component, children);
                 renderResult;
            },
