@@ -29,7 +29,7 @@ module type Reconciler = {
 module Make = (ReconcilerImpl: Reconciler) => {
   type element =
     | Primitive(ReconcilerImpl.primitives)
-    | Component(component)
+    | Component
   and renderedElement =
     | RenderedPrimitive(ReconcilerImpl.node)
   and elementWithChildren = (element, childComponents)
@@ -55,6 +55,19 @@ module Make = (ReconcilerImpl: Reconciler) => {
     ret;
   };
 
+  type componentFunction = unit => component;
+
+  let component = (c: componentFunction, ~children=[]) => {
+        let ret: component = {
+            render: () => {
+                let children: list(component) = [c()];
+                let renderResult: elementWithChildren = (Component, children);
+                renderResult;
+           },
+       };
+       ret;
+  };
+
   let primitiveComponent = (prim, ~children) => {
     let comp: component = {render: () => (Primitive(prim), children)};
     comp;
@@ -64,7 +77,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
    * Instantiate turns a component function into a live instance,
    * and asks the reconciler to append it to the root node.
    */
-  let rec instantiate = (rootNode, component) => {
+  let rec instantiate = (rootNode, component: component) => {
     let (element, children) = component.render();
 
     let primitiveInstance =

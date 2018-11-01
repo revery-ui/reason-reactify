@@ -1,9 +1,14 @@
-/** Simple test cases */
-open TestReconciler;
-open TestUtility;
+/* TODO: Is there a better way for tests to be picked up automatically? */
+/* We could potentially create a lib/bin pair, and use `library_flags -linkall` */
+
+module PrimitiveComponentTest = PrimitiveComponentTest;
+module StatelessComponentTest = StatelessComponentTest;
 
 /* Use our Reconciler to create our own instance */
 module TestReact = Reactify.Make(TestReconciler);
+
+open TestReconciler;
+open TestUtility;
 
 let createRootNode = () => {children: ref([]), nodeId: 0, nodeType: Root};
 
