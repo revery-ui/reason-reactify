@@ -32,7 +32,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
     | Component
   and renderedElement =
     | RenderedPrimitive(ReconcilerImpl.node)
-  and elementWithChildren = (element, childComponents)
+  and elementWithChildren = (element, childComponents, list(effect))
   and component = {render: unit => elementWithChildren}
   and childComponents = list(component)
   and instance = {
@@ -42,8 +42,22 @@ module Make = (ReconcilerImpl: Reconciler) => {
     node: option(ReconcilerImpl.node),
     rootNode: ReconcilerImpl.node,
     mutable childInstances,
+    mutable effectInstances,
   }
-  and childInstances = list(instance);
+  and childInstances = list(instance)
+  /* An effectInstance is an effect that was already instantiated - */
+  /* it's an effect we'll have to run when the element is unmounted */
+  and effectInstance = unit => unit
+  and effectInstances = list(effectInstance)
+  /* An effect is a function sent to useEffect. We haven't run it yet, */
+  /* But we will once the element is mounted */
+  and effect = unit => effectInstance;
+
+  let _currentEffects: ref(list(effect)) = ref([]);
+  let _unsafeResetEffects = () => _currentEffects := [];
+  let _unsafeAddEffect = e =>
+    _currentEffects := List.append(_currentEffects^, [e]);
+  let _unsafeGetEffects = () => _currentEffects^;
 
   type container = {
     rootInstance: ref(option(instance)),
@@ -57,28 +71,52 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   type componentFunction = unit => component;
 
-  let component = (c: componentFunction, ~children=[]) => {
-        let ret: component = {
-            render: () => {
-                let children: list(component) = [c()];
-                let renderResult: elementWithChildren = (Component, children);
-                renderResult;
-           },
-       };
-       ret;
+  let component = (~children=[], c: componentFunction) => {
+    let ret: component = {
+      render: () => {
+        _unsafeResetEffects();
+        let children: list(component) = [c()];
+        let effects = _unsafeGetEffects();
+        let renderResult: elementWithChildren = (
+          Component,
+          children,
+          effects,
+        );
+        renderResult;
+      },
+    };
+    ret;
   };
 
   let primitiveComponent = (prim, ~children) => {
-    let comp: component = {render: () => (Primitive(prim), children)};
+    let comp: component = {render: () => (Primitive(prim), children, [])};
     comp;
   };
+
+  let useEffect = (e: effect) => _unsafeAddEffect(e);
+
+  let _getEffectsFromInstance = (instance: option(instance)) =>
+    switch (instance) {
+    | None => []
+    | Some(i) => i.effectInstances
+    };
 
   /*
    * Instantiate turns a component function into a live instance,
    * and asks the reconciler to append it to the root node.
    */
-  let rec instantiate = (rootNode, component: component) => {
-    let (element, children) = component.render();
+  let rec instantiate =
+          (
+            rootNode,
+            previousInstance: option(instance),
+            component: component,
+          ) => {
+    let previousEffectInstances = _getEffectsFromInstance(previousInstance);
+    List.iter(ei => ei(), previousEffectInstances);
+    let (element, children, effects) = component.render();
+
+    /* TODO: Should this be deferred until we actually mount the component? */
+    let effectInstances = List.map(e => e(), effects);
 
     let primitiveInstance =
       switch (element) {
@@ -93,7 +131,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       };
 
     let childInstances =
-      List.map(instantiate(nextRootPrimitiveInstance), children);
+      List.map(instantiate(nextRootPrimitiveInstance, None), children);
 
     let appendIfInstance = ci =>
       switch (ci.node) {
@@ -110,13 +148,25 @@ module Make = (ReconcilerImpl: Reconciler) => {
       rootNode: nextRootPrimitiveInstance,
       children,
       childInstances,
+      effectInstances,
     };
 
     instance;
   };
 
+  let rec getFirstNode = (node: instance) =>
+    switch (node.node) {
+    | Some(n) => Some(n)
+    | None =>
+      switch (node.childInstances) {
+      | [] => None
+      | [c] => getFirstNode(c)
+      | _ => None
+      }
+    };
+
   let rec reconcile = (rootNode, instance, component) => {
-    let newInstance = instantiate(rootNode, component);
+    let newInstance = instantiate(rootNode, instance, component);
 
     let r =
       switch (instance) {
@@ -128,8 +178,6 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
         newInstance;
       | Some(i) =>
-        let newInstance = instantiate(rootNode, component);
-
         let ret =
           switch (newInstance.node, i.node) {
           | (Some(a), Some(b)) =>
@@ -167,6 +215,13 @@ module Make = (ReconcilerImpl: Reconciler) => {
               newInstance;
             }
           | (Some(a), None) =>
+            /* If there was a non-primitive instance, we need to get the top-level node - */
+            /* and then remove it */
+            let currentNode = getFirstNode(i);
+            switch (currentNode) {
+            | Some(c) => ReconcilerImpl.removeChild(rootNode, c)
+            | _ => ()
+            };
             ReconcilerImpl.appendChild(rootNode, a);
             newInstance;
           | (None, Some(b)) =>
@@ -197,12 +252,14 @@ module Make = (ReconcilerImpl: Reconciler) => {
     };
 
     /* Clean up existing children */
-    for(i in Array.length(newChildren) to Array.length(currentChildInstances) - 1) {
-        switch (currentChildInstances[i].node) {
-        | Some(n) => ReconcilerImpl.removeChild(root, n)
-        | _ => ()
-        }
-    }
+    for (i in
+         Array.length(newChildren) to
+         Array.length(currentChildInstances) - 1) {
+      switch (currentChildInstances[i].node) {
+      | Some(n) => ReconcilerImpl.removeChild(root, n)
+      | _ => ()
+      };
+    };
 
     newChildInstances^;
   };
