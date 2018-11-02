@@ -1,6 +1,6 @@
 [![Build Status](https://bryphe.visualstudio.com/reason-reactify/_apis/build/status/bryphe.reason-reactify)](https://bryphe.visualstudio.com/reason-reactify/_build/latest?definitionId=3)
 
-# Reactify
+# :rocket: Reactify
 
 #### Transform a mutable tree into a functional React-like API, in native Reason!
 
