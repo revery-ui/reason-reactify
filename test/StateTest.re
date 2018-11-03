@@ -31,24 +31,3 @@ test("object", () => {
         assert(Object.of_object(lastElement) == 1);
     });
 });
-
-/* test("Make", () => { */
-/*     module TestModule { */
-/*         type t = int; */
-/*     }; */
-
-/*     module TestState = State.Make(TestModule); */
-
-/*     test("held ref gets updated", () => { */
-/*         let state = TestState.create(); */
-/*         TestState.start(state, []); */
-
-/*         let ctx = TestState.getCurrentContext(state); */
-/*         TestState.finalize(state, 5); */
-
-/*         switch (ctx^) { */
-/*         | Some(i) => assert(i == 5) */
-/*         | None => assert(false) */
-/*         }; */
-/*     }); */
-/* }); */

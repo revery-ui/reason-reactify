@@ -80,7 +80,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
     type t = instance;
   };
   module ComponentState = State.Make(ComponentStateContext);
-  let __globalState = ref(ComponentState.create([]));
+  let noState = ComponentState.create([]);
+  let __globalState = ref(noState);
 
   /* 
     Container API
@@ -151,15 +152,21 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
     /* Set up state for the component */
     let previousState = _getCurrentStateFromInstance(previousInstance);
-    printState(previousState);
     let stateInstance = ref(previousInstance);
     let state = ComponentState.create(previousState);
+    /* We hold onto a reference to the component instance - we need to set this _after_ the component is instantiated */
     let context = ComponentState.getCurrentContext(state);
+
+    /*
+        This is dirty, but we set the 'global' state so that the 'useState'
+        can have access to it, without additional binding or passing. This is
+        necessary to preserve the semantics of the React-style API
+    */
     __globalState := state;
     let (element, children, effects) = component.render();
+    /* Once rendering is complete, we don't need this anymore */
+    __globalState := noState;
     let newState = ComponentState.getNewState(state);
-
-    printState(newState);
 
     /* TODO: Should this be deferred until we actually mount the component? */
     let effectInstances = Effects.runEffects(effects);
@@ -198,6 +205,11 @@ module Make = (ReconcilerImpl: Reconciler) => {
       state: newState,
     };
 
+    /*
+        'context' is the instance that state needs when 'setState' is called
+        We set it here, after the instance is fully realized, so that the 'setState'
+        callback has the latest state for the component instance.
+    */
     context := Some(instance);
 
     instance;
@@ -352,3 +364,4 @@ module Make = (ReconcilerImpl: Reconciler) => {
 };
 
 module State = State;
+module Event = Event;
