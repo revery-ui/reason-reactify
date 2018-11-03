@@ -136,6 +136,17 @@ module Make = (ReconcilerImpl: Reconciler) => {
     | Some(i) => i.state
     };
 
+  let rec getFirstNode = (node: instance) =>
+    switch (node.node) {
+    | Some(n) => Some(n)
+    | None =>
+      switch (node.childInstances) {
+      | [] => None
+      | [c] => getFirstNode(c)
+      | _ => None
+      }
+    };
+
   /*
    * Instantiate turns a component function into a live instance,
    * and asks the reconciler to append it to the root node.
@@ -183,26 +194,40 @@ module Make = (ReconcilerImpl: Reconciler) => {
       | None => rootNode
       };
 
-    let childInstances =
-      List.map(instantiate(nextRootPrimitiveInstance, None), children);
-
-    let appendIfInstance = ci =>
-      switch (ci.node) {
-      | Some(s) => ReconcilerImpl.appendChild(nextRootPrimitiveInstance, s)
-      | _ => ()
-      };
-
-    List.iter(appendIfInstance, childInstances);
-
-    let instance = {
+    /* Create a candidate new instance. We haven't reconciled the children, yet */
+    let newInstance: instance = {
       component,
       element,
       node: primitiveInstance,
       rootNode: nextRootPrimitiveInstance,
       children,
-      childInstances,
+      childInstances: [],
       effectInstances,
       state: newState,
+    };
+
+    let createChildInstances = () => {
+
+      let ret = List.map(instantiate(nextRootPrimitiveInstance, None), children);
+
+        let appendIfInstance = ci =>
+          switch (ci.node) {
+          | Some(s) => ReconcilerImpl.appendChild(nextRootPrimitiveInstance, s)
+          | _ => ()
+          };
+
+          List.iter(appendIfInstance, ret);
+          ret;
+    }
+    
+    let childInstances = switch (previousInstance) {
+    | None => createChildInstances();
+    | Some(p) => reconcileChildren(p, newInstance);
+    }
+
+    let instance: instance = {
+      ...newInstance,
+      childInstances,
     };
 
     /*
@@ -213,20 +238,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
     context := Some(instance);
 
     instance;
-  };
-
-  let rec getFirstNode = (node: instance) =>
-    switch (node.node) {
-    | Some(n) => Some(n)
-    | None =>
-      switch (node.childInstances) {
-      | [] => None
-      | [c] => getFirstNode(c)
-      | _ => None
-      }
-    };
-
-  let rec reconcile = (rootNode, instance, component) => {
+  }
+  and reconcile = (rootNode, instance, component) => {
     let newInstance = instantiate(rootNode, instance, component);
 
     let r =
@@ -245,6 +258,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
             /* Only both replacing node if the primitives are different */
             switch (newInstance.element, i.element) {
             | (Primitive(oldPrim), Primitive(newPrim)) =>
+              print_endline("Primitive-on-primitive");
               if (oldPrim != newPrim) {
                 /* Check if the primitive type is the same - if it is, we can simply update the node */
                 /* If not, we'll replace the node */
@@ -261,11 +275,13 @@ module Make = (ReconcilerImpl: Reconciler) => {
                     newInstance;
                   };
                 } else {
+                  print_endline("Primitive-on-primitive: 1");
                   ReconcilerImpl.replaceChild(rootNode, a, b);
                   newInstance;
                 };
               } else {
                 /* The node itself is unchanged, so we'll just reconcile the children */
+                  print_endline("Primitive-on-primitive: 1");
                 i.childInstances = reconcileChildren(i, newInstance);
                 i;
               }
@@ -278,6 +294,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
           | (Some(a), None) =>
             /* If there was a non-primitive instance, we need to get the top-level node - */
             /* and then remove it */
+            print_endline("1!");
             let currentNode = getFirstNode(i);
             switch (currentNode) {
             | Some(c) => ReconcilerImpl.removeChild(rootNode, c)
@@ -286,9 +303,11 @@ module Make = (ReconcilerImpl: Reconciler) => {
             ReconcilerImpl.appendChild(rootNode, a);
             newInstance;
           | (None, Some(b)) =>
+            print_endline("2!");
             ReconcilerImpl.removeChild(rootNode, b);
             newInstance;
           | (None, None) =>
+            print_endline("3!");
             switch (getFirstNode(i), getFirstNode(newInstance)) {
             | (Some(a), Some(b)) => ReconcilerImpl.removeChild(rootNode, a)
             | _ => ()
@@ -317,7 +336,16 @@ module Make = (ReconcilerImpl: Reconciler) => {
         List.append(newChildInstances^, [newChildInstance]);
     };
 
+    List.iter((nci) => {
+        switch (nci.node) {
+        | Some(n) => 
+            ReconcilerImpl.appendChild(newInstance.rootNode, n);
+        | None => ()
+        };
+    }, newChildInstances^);
+
     /* Clean up existing children */
+    print_endline ("reconcileChildren::cleanup start");
     for (i in
          Array.length(newChildren) to
          Array.length(currentChildInstances) - 1) {
@@ -326,6 +354,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       | _ => ()
       };
     };
+    print_endline ("reconcileChildren::cleanup end");
 
     newChildInstances^;
   };

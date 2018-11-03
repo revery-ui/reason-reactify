@@ -85,6 +85,8 @@ test("ReplaceChildNodeTest", () => {
    print_endline ("going for the update....");
    TestReact.updateContainer(container, <aComponent testVal={1}><bComponent /></aComponent>);
 
+
+    TestReconciler.show(rootNode);
     let expectedStructure = TreeNode(Root, [TreeNode(A(1), [TreeLeaf(B)])]);
    validateStructure(rootNode, expectedStructure);
 });

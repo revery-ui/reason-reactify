@@ -44,6 +44,24 @@ let getUpdates = () => {
     updates^
 };
 
+let makePadding = (amt: int) => String.make(amt * 2, ' ');
+
+let rec showHelper = (level: int, node: node) => {
+    let s = switch(node.nodeType) {
+    | A(i) => "- A(" ++ string_of_int(i) ++ ")"
+    | B => "- B"
+    | C => "- C"
+    | Root => "Root"
+    };
+
+    print_endline (makePadding(level) ++ s);
+    List.iter(showHelper(level + 1), node.children^);
+};
+
+let show = (node: node) => {
+    showHelper(0, node);
+};
+
 let pushUpdate = (u) => {
     updates := List.append(getUpdates(), [u]);
     printUpdate(u);

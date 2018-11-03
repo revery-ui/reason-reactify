@@ -138,4 +138,10 @@ test("nested state works as expected", () => {
   let expectedStructure: tree(primitives) =
     TreeNode(Root, [TreeNode(A(5), [TreeLeaf(A(6))])]);
   validateStructure(rootNode, expectedStructure);
+
+  Event.dispatch(outerEvent, 7);
+  let expectedStructure: tree(primitives) =
+    TreeNode(Root, [TreeNode(A(7), [TreeLeaf(A(6))])]);
+  validateStructure(rootNode, expectedStructure);
+
 });
