@@ -222,7 +222,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
     
     let childInstances = switch (previousInstance) {
     | None => createChildInstances();
-    | Some(p) => reconcileChildren(p, newInstance);
+    | Some(p) => createChildInstances();
     }
 
     let instance: instance = {
