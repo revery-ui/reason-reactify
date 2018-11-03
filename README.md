@@ -36,10 +36,14 @@ And we'll create a type `t` that is a [__variant__](https://reasonml.github.io/d
 Let's start it up with a few simple tags:
 ```diff
 module WebReconciler {
++    type imageProps = {
++       src: string;
++    };
++
 +    type t =
 +    | Div
 +    | Span
-+    | Image;
++    | Image(imageProps);
 }
 ```
 
@@ -49,10 +53,14 @@ The `node` is the type of the actual object we'll be working with in our mutable
 
 ```diff
 module WebReconciler {
+    type imageProps = {
+       src: string;
+    };
+
     type t =
     | Div
     | Span
-    | Image;
+    | Image(imageProps);
 
 +    module Html = Dom_html;
 +    type node = Dom_html.element;
@@ -67,10 +75,14 @@ One of the most important jobs our reconciler has is to turn the _primitive_ obj
 
 ```diff
 module WebReconciler {
+    type imageProps = {
+       src: string;
+    };
+
     type t =
     | Div
     | Span
-    | Image;
+    | Image(imageProps);
 
     type node = Dom_html.element;
 
@@ -80,7 +92,10 @@ module WebReconciler {
 +        switch(primitive) {
 +        | Div => Html.createDiv(document);
 +        | Span => Html.createSpan(document);
-+        | Image => Html.createImage(document);
++        | Image(p) => 
++           let img = Html.createImage(document);
++           img.src = p.src;
++           img;
 +        };
 +    };
 }
@@ -90,7 +105,83 @@ Note how easy [pattern matching](https://reasonml.github.io/docs/en/pattern-matc
 
 ### Step 4: Implement remaining tree operations 
 
-### Step 5: PROFIT
+For our reconciler to work, we also need to implement these operations:
+- `updateInstance`
+- `appendChild`
+- `removeChild`
+- `replaceChild`
+
+Let's set those up!
+
+```diff
+module WebReconciler {
+    type imageProps = {
+       src: string;
+    };
+
+    type t =
+    | Div
+    | Span
+    | Image(imageProps);
+
+    type node = Dom_html.element;
+
+    let document = Html.window##.document;
+
+    let createInstance: t => node = (primitive) => {
+        switch(primitive) {
+        | Div => Html.createDiv(document);
+        | Span => Html.createSpan(document);
+        | Image(p) => 
+           let img = Html.createImage(document);
+           img.src = p.src;
+           img;
+        };
+    };
+
++   let updateInstance = (node, oldPrimitive, newPrimitive) => {
++       switch ((oldState, newState)) => {
++       /* The only update operation we handle today is updating src for an image! */
++       | (Image(old), Image(new)) => node.src = new.src;
++       | _ => ();
++       };
++   };
++
++   let appendChild = (parentNode, childNode) => {
++       parentNode.appendChild(childNode);
++   };
++
++   let removeChild = (parentNode, childNode) => {
++       parentNode.removeChild(childNode);
++   };
++
++   let replaceChild = (parentNode, oldChild, newChild) => {
++       parentNode.replaceChild(oldChild, newChild);
++   };
+}
+```
+
+Phew! That was a lot. Note that `createInstance` and `updateInstance` are operations that use _primitives_ to pass around some context. In this case, we carry around a `src` property for Image, and we set it on `createInstance` and `updateInstance`. The other operations - `appendChild`, `removeChild`, and `replaceChild` are purely _node_ operations. The internals of the reconciler handle the details of associating a `primitive` -> `node`.
+
+### Step 5: Hook it up
+
+`reactify` provides a [functor](https://reasonml.github.io/docs/en/module#module-functions-functors) for building a React API from your reconciler:
+
+```
+module MyReact = Reactify.Make(WebReconciler);
+```
+
+We'll also want to define some primitive components:
+
+
+
+Cool!
+
+### Step 6: Use your API!
+
+#### Create / update a container
+
+#### Create custom components
 
 ## Development
 
@@ -98,8 +189,22 @@ Note how easy [pattern matching](https://reasonml.github.io/docs/en/pattern-matc
 
 ### Running tests
 
+## Limitations
+
+- This project is not using a __fiber-based__ renderer. In particular, that means the following limitations:
+    - Custom components are constrained to returning a single element, to simplify reconciliation.
+    - Updates are not suspendable / resumable. This may not be necessary with native-performance, but it would be nice to have.
+
 ## License
 
-## Special Thanks
+This project is provided under the [MIT License](LICENSE).
 
+Copyright 2018 Bryan Phelps.
 
+## Additional Resources
+
+- The API surface was inspired by the [react-reconciler](https://github.com/facebook/react/tree/master/packages/react-reconciler) package. If you've worked with that before, the `createContainer` and `updateContainer` will be familiar.
+- Related / helpful projects:
+    - [Didact: A DIY React Renderer](https://engineering.hexacta.com/didact-learning-how-react-works-by-building-it-from-scratch-51007984e5c5) - was really useful for learning!
+    - [ReactMini](https://github.com/reasonml/reason-react/tree/master/ReactMini/src)
+    - [BriskML](https://github.com/briskml/brisk) has an expanded implementation of ReactMini: https://github.com/briskml/brisk/blob/master/core/lib/ReactCore_Internal.re
