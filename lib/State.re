@@ -11,7 +11,70 @@
  Definitely open to alternatives!
 */
 
-type t;
+module Object {
+    type t;
 
-let to_state: 'a => t = (v: 'a) => Obj.magic(v);
-let of_state: t => 'a = (v: t) => Obj.magic(v);
+    let to_object: 'a => t = (v: 'a) => Obj.magic(v);
+    let of_object: t => 'a = (v: t) => Obj.magic(v);
+};
+
+module type Context = {
+    type t;
+};
+
+module HeterogenousMutableList {
+    type t = list(ref(Object.t));
+
+    let create = () => [];
+};
+
+module Make = (ContextImpl: Context) => {
+    type t = {
+        context: ref(ref(option(ContextImpl.t))),
+        mutable currentState: HeterogenousMutableList.t,
+        mutable newState: HeterogenousMutableList.t,
+    };
+
+    type updateFunction('a) = 'a => unit;
+
+    let noneContext = () => {
+        ref(None);
+    };
+
+    let create = (previousState: HeterogenousMutableList.t) => {
+        let ret: t = {
+            context: ref(noneContext()),
+            currentState: previousState,
+            newState: HeterogenousMutableList.create(),
+        };
+        ret;
+    };
+
+    let popOldState: (t, 'a) => 'a = (state: t, defaultValue: 'a) => {
+        let curr = switch (state.currentState) {
+        | [] => defaultValue
+        | [hd, ...tail] => {
+            print_endline ("using value");
+            state.currentState = tail;
+            Object.of_object(hd^);
+        }
+        };
+        curr
+    };
+
+    let pushNewState: (t, 'a) => updateFunction('a) = (state: t, currentVal: 'a) => {
+        let updatedVal: ref(Object.t) = ref(Object.to_object(currentVal));
+        state.newState = List.append(state.newState, [updatedVal]);
+        let ret: updateFunction('a) = (newVal: 'a) => {
+            updatedVal := Object.to_object(newVal);
+            ();
+        };
+        ret;
+    };
+
+    let getCurrentContext = (state: t) => state.context^;
+
+    let getNewState: (t) => HeterogenousMutableList.t = (state: t) => {
+        state.newState
+    };
+};

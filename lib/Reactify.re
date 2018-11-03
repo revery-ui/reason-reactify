@@ -54,7 +54,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
     rootNode: ReconcilerImpl.node,
     mutable childInstances,
     mutable effectInstances: Effects.effectInstances,
-    state: list(ref(State.t)),
+    state: State.HeterogenousMutableList.t,
   }
   and childInstances = list(instance)
   /*
@@ -67,34 +67,25 @@ module Make = (ReconcilerImpl: Reconciler) => {
   /* But we will once the element is mounted */
   and effect = unit => effectInstance;
 
-
   /*
     A global, non-pure container to hold effects
     during the course of a render operation.
   */
   let __globalEffects = Effects.create();
 
-  type updateStateContext = {mutable instance: option(instance)};
-
-  let noneContext = () => {
-    let ret: updateStateContext = {instance: None};
-    ret;
+  /*
+    State management for reconciliation
+  */
+  module ComponentStateContext {
+    type t = instance;
   };
+  module ComponentState = State.Make(ComponentStateContext);
+  let noState = ComponentState.create([]);
+  let __globalState = ref(noState);
 
-  let _currentContext: ref(updateStateContext) = ref(noneContext());
-  let _currentState: ref(list(ref(State.t))) = ref([]);
-  let _newState: ref(list(ref(State.t))) = ref([]);
-  let _bindState = (stateList: list(ref(State.t))) => {
-    _currentContext := noneContext();
-    _currentState := stateList;
-    _newState := [];
-    _currentContext^;
-  };
-  let _unbindState = () => {
-    let state = _newState^;
-    state;
-  };
-
+  /* 
+    Container API
+  */
   type container = {
     rootInstance: ref(option(instance)),
     rootNode: ReconcilerImpl.node,
@@ -145,6 +136,17 @@ module Make = (ReconcilerImpl: Reconciler) => {
     | Some(i) => i.state
     };
 
+  let rec getFirstNode = (node: instance) =>
+    switch (node.node) {
+    | Some(n) => Some(n)
+    | None =>
+      switch (node.childInstances) {
+      | [] => None
+      | [c] => getFirstNode(c)
+      | _ => None
+      }
+    };
+
   /*
    * Instantiate turns a component function into a live instance,
    * and asks the reconciler to append it to the root node.
@@ -162,9 +164,20 @@ module Make = (ReconcilerImpl: Reconciler) => {
     /* Set up state for the component */
     let previousState = _getCurrentStateFromInstance(previousInstance);
     let stateInstance = ref(previousInstance);
-    let context = _bindState(previousState);
+    let state = ComponentState.create(previousState);
+    /* We hold onto a reference to the component instance - we need to set this _after_ the component is instantiated */
+    let context = ComponentState.getCurrentContext(state);
+
+    /*
+        This is dirty, but we set the 'global' state so that the 'useState'
+        can have access to it, without additional binding or passing. This is
+        necessary to preserve the semantics of the React-style API
+    */
+    __globalState := state;
     let (element, children, effects) = component.render();
-    let newState = _unbindState();
+    /* Once rendering is complete, we don't need this anymore */
+    __globalState := noState;
+    let newState = ComponentState.getNewState(state);
 
     /* TODO: Should this be deferred until we actually mount the component? */
     let effectInstances = Effects.runEffects(effects);
@@ -181,45 +194,52 @@ module Make = (ReconcilerImpl: Reconciler) => {
       | None => rootNode
       };
 
-    let childInstances =
-      List.map(instantiate(nextRootPrimitiveInstance, None), children);
-
-    let appendIfInstance = ci =>
-      switch (ci.node) {
-      | Some(s) => ReconcilerImpl.appendChild(nextRootPrimitiveInstance, s)
-      | _ => ()
-      };
-
-    List.iter(appendIfInstance, childInstances);
-
-    let instance = {
+    /* Create a candidate new instance. We haven't reconciled the children, yet */
+    let newInstance: instance = {
       component,
       element,
       node: primitiveInstance,
       rootNode: nextRootPrimitiveInstance,
       children,
-      childInstances,
+      childInstances: [],
       effectInstances,
       state: newState,
     };
 
-    context.instance = Some(instance);
+    let createChildInstances = () => {
 
-    instance;
-  };
+      let ret = List.map(instantiate(nextRootPrimitiveInstance, None), children);
 
-  let rec getFirstNode = (node: instance) =>
-    switch (node.node) {
-    | Some(n) => Some(n)
-    | None =>
-      switch (node.childInstances) {
-      | [] => None
-      | [c] => getFirstNode(c)
-      | _ => None
-      }
+        let appendIfInstance = ci =>
+          switch (ci.node) {
+          | Some(s) => ReconcilerImpl.appendChild(nextRootPrimitiveInstance, s)
+          | _ => ()
+          };
+
+          List.iter(appendIfInstance, ret);
+          ret;
+    }
+    
+    let childInstances = switch (previousInstance) {
+    | None => createChildInstances();
+    | Some(p) => createChildInstances();
+    }
+
+    let instance: instance = {
+      ...newInstance,
+      childInstances,
     };
 
-  let rec reconcile = (rootNode, instance, component) => {
+    /*
+        'context' is the instance that state needs when 'setState' is called
+        We set it here, after the instance is fully realized, so that the 'setState'
+        callback has the latest state for the component instance.
+    */
+    context := Some(instance);
+
+    instance;
+  }
+  and reconcile = (rootNode, instance, component) => {
     let newInstance = instantiate(rootNode, instance, component);
 
     let r =
@@ -238,6 +258,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
             /* Only both replacing node if the primitives are different */
             switch (newInstance.element, i.element) {
             | (Primitive(oldPrim), Primitive(newPrim)) =>
+              print_endline("Primitive-on-primitive");
               if (oldPrim != newPrim) {
                 /* Check if the primitive type is the same - if it is, we can simply update the node */
                 /* If not, we'll replace the node */
@@ -254,11 +275,13 @@ module Make = (ReconcilerImpl: Reconciler) => {
                     newInstance;
                   };
                 } else {
+                  print_endline("Primitive-on-primitive: 1");
                   ReconcilerImpl.replaceChild(rootNode, a, b);
                   newInstance;
                 };
               } else {
                 /* The node itself is unchanged, so we'll just reconcile the children */
+                  print_endline("Primitive-on-primitive: 1");
                 i.childInstances = reconcileChildren(i, newInstance);
                 i;
               }
@@ -271,6 +294,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
           | (Some(a), None) =>
             /* If there was a non-primitive instance, we need to get the top-level node - */
             /* and then remove it */
+            print_endline("1!");
             let currentNode = getFirstNode(i);
             switch (currentNode) {
             | Some(c) => ReconcilerImpl.removeChild(rootNode, c)
@@ -279,9 +303,11 @@ module Make = (ReconcilerImpl: Reconciler) => {
             ReconcilerImpl.appendChild(rootNode, a);
             newInstance;
           | (None, Some(b)) =>
+            print_endline("2!");
             ReconcilerImpl.removeChild(rootNode, b);
             newInstance;
           | (None, None) =>
+            print_endline("3!");
             switch (getFirstNode(i), getFirstNode(newInstance)) {
             | (Some(a), Some(b)) => ReconcilerImpl.removeChild(rootNode, a)
             | _ => ()
@@ -310,7 +336,16 @@ module Make = (ReconcilerImpl: Reconciler) => {
         List.append(newChildInstances^, [newChildInstance]);
     };
 
+    List.iter((nci) => {
+        switch (nci.node) {
+        | Some(n) => 
+            ReconcilerImpl.appendChild(newInstance.rootNode, n);
+        | None => ()
+        };
+    }, newChildInstances^);
+
     /* Clean up existing children */
+    print_endline ("reconcileChildren::cleanup start");
     for (i in
          Array.length(newChildren) to
          Array.length(currentChildInstances) - 1) {
@@ -319,27 +354,25 @@ module Make = (ReconcilerImpl: Reconciler) => {
       | _ => ()
       };
     };
+    print_endline ("reconcileChildren::cleanup end");
 
     newChildInstances^;
   };
 
   let useState = (v: 't) => {
-    let n: 't =
-      switch (_currentState^) {
-      | [] => v
-      | [hd, ...tail] =>
-        _currentState := tail;
-        State.of_state(hd^);
-      };
 
-    let updatedVal = ref(State.to_state(n));
-    _newState := List.append(_newState^, [updatedVal]);
+    let state = __globalState^;
+    let n = ComponentState.popOldState(state, v);
 
-    let currentContext = _currentContext^;
+    let updateFunction = ComponentState.pushNewState(state, n);
 
-    let setState = (context: updateStateContext, newVal: 't) => {
-      updatedVal := State.to_state(newVal);
-      switch (context.instance) {
+    /* let updateFunction = (_n) => { (); }; */
+
+    let currentContext = ComponentState.getCurrentContext(state);
+
+    let setState = (context: ref(option(instance)), newVal: 't) => {
+      updateFunction(newVal);
+      switch (context^) {
       | Some(i) =>
         let {rootNode, component} = i;
         reconcile(rootNode, Some(i), component);
@@ -358,3 +391,6 @@ module Make = (ReconcilerImpl: Reconciler) => {
     rootInstance := Some(nextInstance);
   };
 };
+
+module State = State;
+module Event = Event;

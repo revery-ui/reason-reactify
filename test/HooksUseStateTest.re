@@ -2,6 +2,8 @@
 open TestReconciler;
 open TestUtility;
 
+module Event = Reactify.Event;
+
 /* Use our Reconciler to create our own instance */
 module TestReact = Reactify.Make(TestReconciler);
 
@@ -13,27 +15,6 @@ let bComponent = (~children, ()) =>
   TestReact.primitiveComponent(B, ~children);
 let cComponent = (~children, ()) =>
   TestReact.primitiveComponent(C, ~children);
-
-let noop = () => ();
-
-module Event = {
-  type cb('a) = 'a => unit;
-
-  type t('a) = ref(list(cb('a)));
-
-  let create = () => ref([]);
-
-  let subscribe = (evt: t('a), f: cb('a)) => {
-    evt := List.append(evt^, [f]);
-    let unsubscribe = () => {
-        print_endline ("unsubscribe");
-        evt := List.filter((f) => f !== f, evt^)
-    };
-    unsubscribe;
-  }
-
-  let dispatch = (evt: t('a), v: 'a) => List.iter(c => c(v), evt^);
-};
 
 let componentWithState = (~children, ()) =>
   TestReact.component(
@@ -72,6 +53,7 @@ let componentThatUpdatesState = (~children, ~event: Event.t(int), ()) =>
     ~children,
   );
 
+
 test("useState updates state with set function", () => {
   let rootNode = createRootNode();
 
@@ -90,7 +72,6 @@ test("useState updates state with set function", () => {
 
 test("useState can update multiple times", () => {
   let rootNode = createRootNode();
-
   let container = TestReact.createContainer(rootNode);
 
   let event: Event.t(int) = Event.create();
@@ -112,3 +93,56 @@ test("useState can update multiple times", () => {
     TreeNode(Root, [TreeLeaf(A(7))]);
   validateStructure(rootNode, expectedStructure);
 });
+
+let componentThatUpdatesStateAndRendersChildren = (~children, ~event: Event.t(int), ()) =>
+  TestReact.component(
+    () => {
+      let (s, setS) = TestReact.useState(2);
+
+      print_endline("Value: " ++ string_of_int(s));
+      TestReact.useEffect(() => {
+        let unsubscribe = Event.subscribe(event, v => setS(v));
+        () => unsubscribe();
+      });
+
+      <aComponent testVal=s>
+        ...children
+      </aComponent>
+    },
+    ~children,
+  );
+
+/* TODO: Fix nested state! */
+/* test("nested state works as expected", () => { */
+
+/*   let rootNode = createRootNode(); */
+/*   let container = TestReact.createContainer(rootNode); */
+
+/*   let outerEvent = Event.create(); */
+/*   let innerEvent = Event.create(); */
+
+/*   TestReact.updateContainer(container, */
+/*         <componentThatUpdatesStateAndRendersChildren event=outerEvent> */
+/*             <componentThatUpdatesState event=innerEvent/> */
+/*         </componentThatUpdatesStateAndRendersChildren>); */
+
+/*   let expectedStructure: tree(primitives) = */
+/*     TreeNode(Root, [TreeNode(A(2), [TreeLeaf(A(2))])]); */
+/*   validateStructure(rootNode, expectedStructure); */
+
+/*   Event.dispatch(outerEvent, 5); */
+/*   let expectedStructure: tree(primitives) = */
+/*     TreeNode(Root, [TreeNode(A(5), [TreeLeaf(A(2))])]); */
+/*   validateStructure(rootNode, expectedStructure); */
+
+/*   Event.dispatch(innerEvent, 6); */
+/*   let expectedStructure: tree(primitives) = */
+/*     TreeNode(Root, [TreeNode(A(5), [TreeLeaf(A(6))])]); */
+/*   validateStructure(rootNode, expectedStructure); */
+
+/*   Event.dispatch(outerEvent, 7); */
+/*   let expectedStructure: tree(primitives) = */
+/*     TreeNode(Root, [TreeNode(A(7), [TreeLeaf(A(6))])]); */
+/*   validateStructure(rootNode, expectedStructure); */
+
+/* }); */
