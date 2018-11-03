@@ -54,7 +54,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
     rootNode: ReconcilerImpl.node,
     mutable childInstances,
     mutable effectInstances: Effects.effectInstances,
-    state: list(ref(State.t)),
+    state: State.HeterogenousMutableList.t,
   }
   and childInstances = list(instance)
   /*
@@ -67,34 +67,24 @@ module Make = (ReconcilerImpl: Reconciler) => {
   /* But we will once the element is mounted */
   and effect = unit => effectInstance;
 
-
   /*
     A global, non-pure container to hold effects
     during the course of a render operation.
   */
   let __globalEffects = Effects.create();
 
-  type updateStateContext = {mutable instance: option(instance)};
-
-  let noneContext = () => {
-    let ret: updateStateContext = {instance: None};
-    ret;
+  /*
+    State management for reconciliation
+  */
+  module ComponentStateContext {
+    type t = instance;
   };
+  module ComponentState = State.Make(ComponentStateContext);
+  let __globalState = ref(ComponentState.create([]));
 
-  let _currentContext: ref(updateStateContext) = ref(noneContext());
-  let _currentState: ref(list(ref(State.t))) = ref([]);
-  let _newState: ref(list(ref(State.t))) = ref([]);
-  let _bindState = (stateList: list(ref(State.t))) => {
-    _currentContext := noneContext();
-    _currentState := stateList;
-    _newState := [];
-    _currentContext^;
-  };
-  let _unbindState = () => {
-    let state = _newState^;
-    state;
-  };
-
+  /* 
+    Container API
+  */
   type container = {
     rootInstance: ref(option(instance)),
     rootNode: ReconcilerImpl.node,
@@ -158,13 +148,29 @@ module Make = (ReconcilerImpl: Reconciler) => {
     /* Recycle any previous effect instances */
     let previousEffectInstances = _getEffectsFromInstance(previousInstance);
     Effects.runEffectInstances(previousEffectInstances);
+    let printState = (state: State.HeterogenousMutableList.t) => {
+        let printItem = (i: ref(State.Object.t)) => {
+            let item = i^;
+            let intItem: int = State.Object.of_object(item);
+            print_endline("Item: " ++ string_of_int(intItem));
+        };
+        List.iter(printItem, state);
+    };
+
 
     /* Set up state for the component */
     let previousState = _getCurrentStateFromInstance(previousInstance);
+    print_endline ("** OLD STATE **");
+    printState(previousState);
     let stateInstance = ref(previousInstance);
-    let context = _bindState(previousState);
+    print_endline("Previous state lengtH: " ++ string_of_int(List.length(previousState)));
+    let state = ComponentState.create(previousState);
+    let context = ComponentState.getCurrentContext(state);
+    __globalState := state;
     let (element, children, effects) = component.render();
-    let newState = _unbindState();
+    let newState = ComponentState.getNewState(state);
+
+    printState(newState);
 
     /* TODO: Should this be deferred until we actually mount the component? */
     let effectInstances = Effects.runEffects(effects);
@@ -203,7 +209,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       state: newState,
     };
 
-    context.instance = Some(instance);
+    context := Some(instance);
 
     instance;
   };
@@ -324,22 +330,20 @@ module Make = (ReconcilerImpl: Reconciler) => {
   };
 
   let useState = (v: 't) => {
-    let n: 't =
-      switch (_currentState^) {
-      | [] => v
-      | [hd, ...tail] =>
-        _currentState := tail;
-        State.of_state(hd^);
-      };
 
-    let updatedVal = ref(State.to_state(n));
-    _newState := List.append(_newState^, [updatedVal]);
+    let state = __globalState^;
+    let n = ComponentState.popOldState(state, v);
 
-    let currentContext = _currentContext^;
+    let updateFunction = ComponentState.pushNewState(state, n);
 
-    let setState = (context: updateStateContext, newVal: 't) => {
-      updatedVal := State.to_state(newVal);
-      switch (context.instance) {
+    /* let updateFunction = (_n) => { (); }; */
+
+    let currentContext = ComponentState.getCurrentContext(state);
+
+    let setState = (context: ref(option(instance)), newVal: 't) => {
+      print_endline("UPDATE: " ++ string_of_int(Obj.magic(newVal)));
+      updateFunction(newVal);
+      switch (context^) {
       | Some(i) =>
         let {rootNode, component} = i;
         reconcile(rootNode, Some(i), component);
@@ -358,3 +362,5 @@ module Make = (ReconcilerImpl: Reconciler) => {
     rootInstance := Some(nextInstance);
   };
 };
+
+module State = State;
