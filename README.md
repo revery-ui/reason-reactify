@@ -113,6 +113,7 @@ For our reconciler to work, we also need to implement these operations:
 
 Let's set those up!
 
+```diff
 module WebReconciler {
     type imageProps = {
        src: string;
@@ -158,6 +159,7 @@ module WebReconciler {
 +       parentNode.replaceChild(oldChild, newChild);
 +   };
 }
+```
 
 Phew! That was a lot. Note that `createInstance` and `updateInstance` are operations that use _primitives_ to pass around some context. In this case, we carry around a `src` property for Image, and we set it on `createInstance` and `updateInstance`. The other operations - `appendChild`, `removeChild`, and `replaceChild` are purely _node_ operations. The internals of the reconciler handle the details of associating a `primitive` -> `node`.
 
