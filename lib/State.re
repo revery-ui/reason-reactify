@@ -65,13 +65,12 @@ module Make = (ContextImpl: Context) => {
     let pushNewState: (t, 'a) => updateFunction('a) = (state: t, currentVal: 'a) => {
         let updatedVal: ref(Object.t) = ref(Object.to_object(currentVal));
         state.newState = List.append(state.newState, [updatedVal]);
-    
         let ret: updateFunction('a) = (newVal: 'a) => {
             updatedVal := Object.to_object(newVal);
             ();
         };
         ret;
-    }
+    };
 
     let getCurrentContext = (state: t) => state.context^;
 

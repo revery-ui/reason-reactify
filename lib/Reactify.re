@@ -148,22 +148,11 @@ module Make = (ReconcilerImpl: Reconciler) => {
     /* Recycle any previous effect instances */
     let previousEffectInstances = _getEffectsFromInstance(previousInstance);
     Effects.runEffectInstances(previousEffectInstances);
-    let printState = (state: State.HeterogenousMutableList.t) => {
-        let printItem = (i: ref(State.Object.t)) => {
-            let item = i^;
-            let intItem: int = State.Object.of_object(item);
-            print_endline("Item: " ++ string_of_int(intItem));
-        };
-        List.iter(printItem, state);
-    };
-
 
     /* Set up state for the component */
     let previousState = _getCurrentStateFromInstance(previousInstance);
-    print_endline ("** OLD STATE **");
     printState(previousState);
     let stateInstance = ref(previousInstance);
-    print_endline("Previous state lengtH: " ++ string_of_int(List.length(previousState)));
     let state = ComponentState.create(previousState);
     let context = ComponentState.getCurrentContext(state);
     __globalState := state;
@@ -341,7 +330,6 @@ module Make = (ReconcilerImpl: Reconciler) => {
     let currentContext = ComponentState.getCurrentContext(state);
 
     let setState = (context: ref(option(instance)), newVal: 't) => {
-      print_endline("UPDATE: " ++ string_of_int(Obj.magic(newVal)));
       updateFunction(newVal);
       switch (context^) {
       | Some(i) =>
