@@ -42,7 +42,10 @@ module type React = {
      TODO: Can we clean this interface up and just make component
      a function of type unit => elementWithChildren ?
    */
-  and component = {render: unit => elementWithChildren}
+  and component = {
+      element,
+      render: unit => elementWithChildren
+  }
   and childComponents = list(component)
   and effectInstance = unit => unit
   and effectInstances = list(effectInstance)
