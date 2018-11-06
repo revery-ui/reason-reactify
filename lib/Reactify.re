@@ -13,7 +13,10 @@ module Make = (ReconcilerImpl: Reconciler) => {
      TODO: Can we clean this interface up and just make component
      a function of type unit => elementWithChildren ?
    */
-  and component = {render: unit => elementWithChildren}
+  and component = {
+      element,
+      render: unit => elementWithChildren
+  }
   and childComponents = list(component)
   /*
       An instance is a component that has been rendered.
@@ -22,7 +25,6 @@ module Make = (ReconcilerImpl: Reconciler) => {
    */
   and instance = {
     component,
-    element,
     children: childComponents,
     node: option(ReconcilerImpl.node),
     rootNode: ReconcilerImpl.node,
@@ -80,6 +82,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
   type componentFunction = unit => component;
 
   let empty: component = {
+    element: Component,
     render: () => {
         (Component, [], [])
     },
@@ -87,6 +90,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   let component = (~children: childComponents=[], c: componentFunction) => {
     let ret: component = {
+      element: Component,
       render: () => {
         Effects.resetEffects(__globalEffects);
         let children: list(component) = [c()];
@@ -103,7 +107,10 @@ module Make = (ReconcilerImpl: Reconciler) => {
   };
 
   let primitiveComponent = (~children, prim) => {
-    let comp: component = {render: () => (Primitive(prim), children, [])};
+    let comp: component = {
+        element: Primitive(prim),
+        render: () => (Primitive(prim), children, [])
+    };
     comp;
   };
 
@@ -192,7 +199,6 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
     let instance: instance = {
       component,
-      element,
       node: primitiveInstance,
       rootNode: nextRootPrimitiveInstance,
       children,
@@ -227,13 +233,13 @@ module Make = (ReconcilerImpl: Reconciler) => {
           switch (newInstance.node, i.node) {
           | (Some(a), Some(b)) =>
             /* Only both replacing node if the primitives are different */
-            switch (newInstance.element, i.element) {
+            switch (newInstance.component.element, i.component.element) {
             | (Primitive(oldPrim), Primitive(newPrim)) =>
               if (oldPrim != newPrim) {
                 /* Check if the primitive type is the same - if it is, we can simply update the node */
                 /* If not, we'll replace the node */
                 if (Utility.areConstructorsEqual(oldPrim, newPrim)) {
-                  switch (newInstance.element) {
+                  switch (newInstance.component.element) {
                   | Primitive(o) =>
                     ReconcilerImpl.updateInstance(b, o);
                     i.childInstances = reconcileChildren(b, i.childInstances, newInstance.children);
