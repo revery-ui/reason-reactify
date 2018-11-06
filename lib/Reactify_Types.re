@@ -35,7 +35,7 @@ module type React = {
     | Component
   and renderedElement =
     | RenderedPrimitive(node)
-  and elementWithChildren = (element, childComponents, list(effect))
+  and elementWithChildren = (element, childComponents, list(effect), Context.t)
   /*
      A component is our JSX primitive element - just an object
      with a render method.
@@ -74,6 +74,14 @@ module type React = {
   /*
        Component API
    */
+
+  type providerConstructor('t) = (~children: childComponents, ~value: 't, unit) => component;
+  type context('t);
+
+  let getProvider: context('t) => providerConstructor('t);
+  let createContext: 't => context('t);
+  let useContext: context('t) => 't;
+
   let empty: component;
 
   let useEffect: effect => unit;

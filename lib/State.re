@@ -11,14 +11,7 @@
  Definitely open to alternatives!
 */
 
-module Object {
-    type t;
-
-    let to_object: 'a => t = (v: 'a) => Obj.magic(v);
-    let of_object: t => 'a = (v: t) => Obj.magic(v);
-};
-
-module type Context = {
+module type StateContext = {
     type t;
 };
 
@@ -28,9 +21,9 @@ module HeterogenousMutableList {
     let create = () => [];
 };
 
-module Make = (ContextImpl: Context) => {
+module Make = (StateContextImpl: StateContext) => {
     type t = {
-        context: ref(ref(option(ContextImpl.t))),
+        context: ref(ref(option(StateContextImpl.t))),
         mutable currentState: HeterogenousMutableList.t,
         mutable newState: HeterogenousMutableList.t,
     };
@@ -54,7 +47,6 @@ module Make = (ContextImpl: Context) => {
         let curr = switch (state.currentState) {
         | [] => defaultValue
         | [hd, ...tail] => {
-            print_endline ("using value");
             state.currentState = tail;
             Object.of_object(hd^);
         }
