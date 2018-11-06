@@ -25,3 +25,19 @@ jobs:
     vmImage: 'vs2017-win2016'
   steps:
   - template: esy-build-steps.yml
+
+- job: Release
+  displayName: Release
+  dependsOn:
+      - Linux
+      - MacOS
+      - Windows
+  condition: succeeded()
+  pool:
+     vmImage: ubuntu-16.04
+  steps:
+    - task: PublishBuildArtifacts@1
+      displayName: 'Release Package'
+      inputs:
+          PathtoPublish: '.'
+          ArtifictName: npm-package
