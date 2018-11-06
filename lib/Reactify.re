@@ -115,7 +115,6 @@ module Make = (ReconcilerImpl: Reconciler) => {
   };
 
   let createContext = (initialValue: 't) => {
-
       let provider = (~children, ~value, ()) => {
           let ret: component = {
               render: () => {

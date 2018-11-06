@@ -6,4 +6,5 @@ module PrimitiveComponentTest = PrimitiveComponentTest;
 module StatelessComponentTest = StatelessComponentTest;
 module HooksUseEffectTest = HooksUseEffectTest;
 module HooksUseStateTest = HooksUseStateTest;
+module HooksUseContextTest = HooksUseContextTest;
 module UtilityTest = UtilityTest;
