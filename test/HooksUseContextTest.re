@@ -41,7 +41,7 @@ test("uses provider value", () => {
   let container = TestReact.createContainer(rootNode);
 
   let testContext = TestReact.createContext(2);
-  let provider = testContext.provider;
+  let provider = TestReact.getProvider(testContext);
 
     let componentThatUsesContext = (~children, ()) => TestReact.component(() => {
         let ctx = TestReact.useContext(testContext);
@@ -63,22 +63,22 @@ test("uses nested provider value", () => {
   let container = TestReact.createContainer(rootNode);
 
   let testContext = TestReact.createContext(2);
-  let provider = testContext.provider;
+  let provider = TestReact.getProvider(testContext);
 
     let componentThatUsesContext = (~children, ()) => TestReact.component(() => {
         let ctx = TestReact.useContext(testContext);
+        <aComponent testVal=ctx />
+    }, ~children);
 
+  TestReact.updateContainer(container, 
         <provider value=9>
             <provider value=10>
-                <aComponent testVal=ctx />
+                <componentThatUsesContext />
             </provider>
-        </provider>
-    }, ~children);
+        </provider>);
 
   let expectedStructure: tree(primitives) =
     TreeNode(Root, [TreeLeaf(A(10))]);
-
-  TestReact.updateContainer(container, <componentThatUsesContext />);
   validateStructure(rootNode, expectedStructure);
 });
 

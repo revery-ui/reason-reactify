@@ -1,5 +1,4 @@
-module State = Reactify.State;
-module Object = State.Object;
+module Object = Reactify.Object;
 
 open TestUtility;
 
