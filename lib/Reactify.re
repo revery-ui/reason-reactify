@@ -107,6 +107,35 @@ module Make = (ReconcilerImpl: Reconciler) => {
     comp;
   };
 
+  /* Context */
+  type providerConstructor('t) = (~children: childComponents, ~value: 't, unit) => component;
+  type context('t) = {
+    provider: providerConstructor('t),
+    initialValue: 't
+  };
+
+  let createContext = (initialValue: 't) => {
+
+      let provider = (~children, ~value, ()) => {
+          let ret: component = {
+              render: () => {
+                  (Component, children, []);
+              },
+          }
+          ret
+      };
+
+      let ret: context('t) = {
+          provider,
+          initialValue,
+      };
+      ret
+  };
+
+  let useContext = (ctx: context('t)) => {
+      ctx.initialValue
+  };
+
   let useEffect = (e: effect) => Effects.addEffect(__globalEffects, e);
 
   exception TodoException;

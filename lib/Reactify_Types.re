@@ -71,6 +71,16 @@ module type React = {
   /*
        Component API
    */
+
+  type providerConstructor('t) = (~children: childComponents, ~value: 't, unit) => component;
+  type context('t) = {
+    provider: providerConstructor('t),
+    initialValue: 't
+  };
+
+  let createContext: 't => context('t);
+  let useContext: context('t) => 't;
+
   let empty: component;
 
   let useEffect: effect => unit;
