@@ -6,7 +6,12 @@ module Make = (ReconcilerImpl: Reconciler) => {
     | Component
   and renderedElement =
     | RenderedPrimitive(ReconcilerImpl.node)
-  and elementWithChildren = (element, childComponents, list(effect), Context.t)
+  and elementWithChildren = (
+    element,
+    childComponents,
+    list(effect),
+    Context.t,
+  )
   /*
      A component is our JSX primitive element - just an object
      with a render method.
@@ -54,10 +59,10 @@ module Make = (ReconcilerImpl: Reconciler) => {
    */
   let __globalEffects = Effects.create();
 
-  /* 
-     A global, non-pure container to hold current
-     context during hte course of a render operation.
-  */
+  /*
+      A global, non-pure container to hold current
+      context during hte course of a render operation.
+   */
   let noContext = Context.create();
   let __globalContext = ref(noContext);
 
@@ -88,9 +93,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
   type componentFunction = unit => component;
 
   let empty: component = {
-    render: () => {
-        (Component, [], [], __globalContext^)
-    },
+    render: () => (Component, [], [], __globalContext^),
   };
 
   let component = (~children: childComponents=[], c: componentFunction) => {
@@ -112,49 +115,48 @@ module Make = (ReconcilerImpl: Reconciler) => {
   };
 
   let primitiveComponent = (~children, prim) => {
-    let comp: component = {render: () => (Primitive(prim), children, [], __globalContext^)};
+    let comp: component = {
+      render: () => (Primitive(prim), children, [], __globalContext^),
+    };
     comp;
   };
 
   /* Context */
   let __contextId = ref(0);
-  type providerConstructor('t) = (~children: childComponents, ~value: 't, unit) => component;
+  type providerConstructor('t) =
+    (~children: childComponents, ~value: 't, unit) => component;
   type context('t) = {
     initialValue: 't,
-    id: int
+    id: int,
   };
 
   let createContext = (initialValue: 't) => {
-      let contextId = __contextId^;
-      __contextId := __contextId^ + 1;
-      let ret: context('t) = {
-          initialValue,
-          id: contextId,
-      };
-      ret
+    let contextId = __contextId^;
+    __contextId := __contextId^ + 1;
+    let ret: context('t) = {initialValue, id: contextId};
+    ret;
   };
 
-  let getProvider = (ctx) => {
-      let provider = (~children, ~value, ()) => {
-          let ret: component = {
-              render: () => {
-                  let contextId = ctx.id;
-                  let context = Context.clone(__globalContext^);
-                  Context.set(context, contextId, Object.to_object(value));
-                  (Component, children, [], context);
-              },
-          }
-          ret
+  let getProvider = ctx => {
+    let provider = (~children, ~value, ()) => {
+      let ret: component = {
+        render: () => {
+          let contextId = ctx.id;
+          let context = Context.clone(__globalContext^);
+          Context.set(context, contextId, Object.to_object(value));
+          (Component, children, [], context);
+        },
       };
-      provider;
+      ret;
+    };
+    provider;
   };
 
-  let useContext = (ctx: context('t)) => {
-      switch (Context.get(__globalContext^, ctx.id)) {
-      | Some(x) => Object.of_object(x)
-      | None => ctx.initialValue
-      };
-  };
+  let useContext = (ctx: context('t)) =>
+    switch (Context.get(__globalContext^, ctx.id)) {
+    | Some(x) => Object.of_object(x)
+    | None => ctx.initialValue
+    };
 
   let useEffect = (e: effect) => Effects.addEffect(__globalEffects, e);
 
@@ -240,7 +242,13 @@ module Make = (ReconcilerImpl: Reconciler) => {
       };
 
     let previousChildInstances = _getPreviousChildInstances(previousInstance);
-    let childInstances = reconcileChildren(nextRootPrimitiveInstance, previousChildInstances, children, newContext);
+    let childInstances =
+      reconcileChildren(
+        nextRootPrimitiveInstance,
+        previousChildInstances,
+        children,
+        newContext,
+      );
 
     let instance: instance = {
       component,
@@ -248,7 +256,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       node: primitiveInstance,
       rootNode: nextRootPrimitiveInstance,
       children,
-      childInstances: childInstances,
+      childInstances,
       effectInstances,
       state: newState,
       context: newContext,
@@ -289,7 +297,13 @@ module Make = (ReconcilerImpl: Reconciler) => {
                   switch (newInstance.element) {
                   | Primitive(o) =>
                     ReconcilerImpl.updateInstance(b, o);
-                    i.childInstances = reconcileChildren(b, i.childInstances, newInstance.children, context);
+                    i.childInstances =
+                      reconcileChildren(
+                        b,
+                        i.childInstances,
+                        newInstance.children,
+                        context,
+                      );
                     i;
                   | _ =>
                     print_endline(
@@ -303,9 +317,15 @@ module Make = (ReconcilerImpl: Reconciler) => {
                 };
               } else {
                 /* The node itself is unchanged, so we'll just reconcile the children */
-                i.childInstances = reconcileChildren(b, i.childInstances, newInstance.children, context);
+                i.childInstances =
+                  reconcileChildren(
+                    b,
+                    i.childInstances,
+                    newInstance.children,
+                    context,
+                  );
                 i;
-              };
+              }
             | _ =>
               print_endline(
                 "ERROR: Should only be nodes if there are primitives!",
@@ -325,16 +345,22 @@ module Make = (ReconcilerImpl: Reconciler) => {
           | (None, Some(b)) =>
             ReconcilerImpl.removeChild(rootNode, b);
             newInstance;
-          | (None, None) =>
-            newInstance;
+          | (None, None) => newInstance
           };
 
         ret;
       };
     r;
   }
-  and reconcileChildren = (root: node, currentChildInstances: childInstances, newChildren: list(component), context: Context.t) => {
-    let currentChildInstances: array(instance) = Array.of_list(currentChildInstances);
+  and reconcileChildren =
+      (
+        root: node,
+        currentChildInstances: childInstances,
+        newChildren: list(component),
+        context: Context.t,
+      ) => {
+    let currentChildInstances: array(instance) =
+      Array.of_list(currentChildInstances);
     let newChildren = Array.of_list(newChildren);
 
     let newChildInstances: ref(childInstances) = ref([]);
@@ -344,7 +370,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
         i >= Array.length(currentChildInstances) ?
           None : Some(currentChildInstances[i]);
       let childComponent = newChildren[i];
-      let newChildInstance = reconcile(root, childInstance, childComponent, context);
+      let newChildInstance =
+        reconcile(root, childInstance, childComponent, context);
       newChildInstances :=
         List.append(newChildInstances^, [newChildInstance]);
     };
@@ -378,6 +405,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       | Some(i) =>
         let {rootNode, component} = i;
         let _ = reconcile(rootNode, Some(i), component, i.context);
+        ();
       | _ => print_endline("WARNING: Skipping reconcile!")
       };
     };
@@ -388,7 +416,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
   let updateContainer = (container, component) => {
     let {rootNode, rootInstance} = container;
     let prevInstance = rootInstance^;
-    let nextInstance = reconcile(rootNode, prevInstance, component, noContext);
+    let nextInstance =
+      reconcile(rootNode, prevInstance, component, noContext);
     rootInstance := Some(nextInstance);
   };
 };
