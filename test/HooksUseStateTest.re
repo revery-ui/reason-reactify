@@ -112,37 +112,89 @@ let componentThatUpdatesStateAndRendersChildren = (~children, ~event: Event.t(in
     ~children,
   );
 
-/* TODO: Fix nested state! */
-/* test("nested state works as expected", () => { */
+test("nested state works as expected", () => {
 
-/*   let rootNode = createRootNode(); */
-/*   let container = TestReact.createContainer(rootNode); */
+  let rootNode = createRootNode();
+  let container = TestReact.createContainer(rootNode);
 
-/*   let outerEvent = Event.create(); */
-/*   let innerEvent = Event.create(); */
+  let outerEvent = Event.create();
+  let innerEvent = Event.create();
 
-/*   TestReact.updateContainer(container, */
-/*         <componentThatUpdatesStateAndRendersChildren event=outerEvent> */
-/*             <componentThatUpdatesState event=innerEvent/> */
-/*         </componentThatUpdatesStateAndRendersChildren>); */
+  TestReact.updateContainer(container,
+        <componentThatUpdatesStateAndRendersChildren event=outerEvent>
+            <componentThatUpdatesState event=innerEvent/>
+        </componentThatUpdatesStateAndRendersChildren>);
 
-/*   let expectedStructure: tree(primitives) = */
-/*     TreeNode(Root, [TreeNode(A(2), [TreeLeaf(A(2))])]); */
-/*   validateStructure(rootNode, expectedStructure); */
+  let expectedStructure: tree(primitives) =
+    TreeNode(Root, [TreeNode(A(2), [TreeLeaf(A(2))])]);
+  validateStructure(rootNode, expectedStructure);
 
-/*   Event.dispatch(outerEvent, 5); */
-/*   let expectedStructure: tree(primitives) = */
-/*     TreeNode(Root, [TreeNode(A(5), [TreeLeaf(A(2))])]); */
-/*   validateStructure(rootNode, expectedStructure); */
+  Event.dispatch(outerEvent, 5);
+  let expectedStructure: tree(primitives) =
+    TreeNode(Root, [TreeNode(A(5), [TreeLeaf(A(2))])]);
+  validateStructure(rootNode, expectedStructure);
 
-/*   Event.dispatch(innerEvent, 6); */
-/*   let expectedStructure: tree(primitives) = */
-/*     TreeNode(Root, [TreeNode(A(5), [TreeLeaf(A(6))])]); */
-/*   validateStructure(rootNode, expectedStructure); */
+  Event.dispatch(innerEvent, 6);
+  let expectedStructure: tree(primitives) =
+    TreeNode(Root, [TreeNode(A(5), [TreeLeaf(A(6))])]);
+  validateStructure(rootNode, expectedStructure);
 
-/*   Event.dispatch(outerEvent, 7); */
-/*   let expectedStructure: tree(primitives) = */
-/*     TreeNode(Root, [TreeNode(A(7), [TreeLeaf(A(6))])]); */
-/*   validateStructure(rootNode, expectedStructure); */
+  Event.dispatch(outerEvent, 7);
+  let expectedStructure: tree(primitives) =
+    TreeNode(Root, [TreeNode(A(7), [TreeLeaf(A(6))])]);
+  validateStructure(rootNode, expectedStructure);
+});
 
-/* }); */
+type renderOption =
+/* | Nothing */
+| ComponentWithState
+| AComponent(int);
+
+let componentThatWrapsEitherPrimitiveOrComponent = (~children, ~event: Event.t(renderOption), ()) =>
+  TestReact.component(
+    () => {
+      let (s, setS) = TestReact.useState(ComponentWithState);
+
+      TestReact.useEffect(() => {
+        let unsubscribe = Event.subscribe(event, v => setS(v));
+        () => unsubscribe();
+      });
+
+      switch(s) {
+      /* | Nothing => () */
+      | ComponentWithState => <componentWithState />
+      | AComponent(x) => <aComponent testVal=x />
+      }
+    },
+    ~children,
+  );
+
+test("switching between a component to a primitive and back works", () => {
+
+  let rootNode = createRootNode();
+  let container = TestReact.createContainer(rootNode);
+
+  let boolEvent: Event.t(renderOption) = Event.create();
+  TestReact.updateContainer(container,
+        <componentThatWrapsEitherPrimitiveOrComponent event=boolEvent />);
+
+  let expectedStructure: tree(primitives) =
+    TreeNode(Root, [TreeLeaf(A(2))]);
+  validateStructure(rootNode, expectedStructure);
+
+  Event.dispatch(boolEvent, AComponent(3));
+  let expectedStructure: tree(primitives) =
+    TreeNode(Root, [TreeLeaf(A(3))]);
+  validateStructure(rootNode, expectedStructure);
+
+  Event.dispatch(boolEvent, ComponentWithState);
+  let expectedStructure: tree(primitives) =
+    TreeNode(Root, [TreeLeaf(A(2))]);
+  validateStructure(rootNode, expectedStructure);
+
+  Event.dispatch(boolEvent, AComponent(5));
+  let expectedStructure: tree(primitives) =
+    TreeNode(Root, [TreeLeaf(A(5))]);
+  validateStructure(rootNode, expectedStructure);
+});
+
