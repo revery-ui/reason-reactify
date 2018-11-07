@@ -1,4 +1,5 @@
 [![Build Status](https://bryphe.visualstudio.com/reason-reactify/_apis/build/status/bryphe.reason-reactify)](https://bryphe.visualstudio.com/reason-reactify/_build/latest?definitionId=3)
+[![npm version](https://badge.fury.io/js/reason-reactify.svg)](https://badge.fury.io/js/reason-reactify)
 
 # :rocket: Reactify
 
