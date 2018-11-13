@@ -339,6 +339,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
                       i.childInstances,
                       newInstance.children,
                       context,
+                      container,
                     );
                   i;
                 } else {
