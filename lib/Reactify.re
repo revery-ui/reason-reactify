@@ -37,7 +37,16 @@ module Make = (ReconcilerImpl: Reconciler) => {
     mutable effectInstances: Effects.effectInstances,
     state: State.HeterogenousMutableList.t,
     context: Context.HeterogenousHashtbl.t,
+    container: t,
   }
+  and container = {
+    onBeginReconcile: Event.t(ReconcilerImpl.node),
+    onEndReconcile: Event.t(ReconcilerImpl.node),
+
+    rootInstance: ref(option(instance)),
+    containerNode: ReconcilerImpl.node,
+  }
+  and t = container
   and childInstances = list(instance)
   /*
      An effectInstance is an effect that was already instantiated -
@@ -81,15 +90,37 @@ module Make = (ReconcilerImpl: Reconciler) => {
   /*
      Container API
    */
-  type container = {
-    rootInstance: ref(option(instance)),
-    rootNode: ReconcilerImpl.node,
-  };
-  type t = container;
+  type reconcileNotification = node => unit;
 
-  let createContainer = (rootNode: ReconcilerImpl.node) => {
-    let ret: container = {rootNode, rootInstance: ref(None)};
+  let createContainer = (~onBeginReconcile:option(reconcileNotification)=?, ~onEndReconcile:option(reconcileNotification)=?, rootNode: ReconcilerImpl.node) => {
+
+    let be = Event.create();
+    let ee = Event.create();
+
+    switch (onBeginReconcile) {
+    | Some(x) => 
+        let _ = Event.subscribe(be, x);
+        ();
+    | _ => ()
+    };
+
+    switch (onEndReconcile) {
+    | Some(x) => 
+        let _ = Event.subscribe(ee, x);
+        ();
+    | _ => ()
+    };
+
+    let ret: container = {
+        onBeginReconcile: be,
+        onEndReconcile: ee,
+        containerNode: rootNode, 
+        rootInstance: ref(None)
+    };
+
+
     ret;
+
   };
 
   type componentFunction = unit => component;
@@ -206,6 +237,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
             previousInstance: option(instance),
             component: component,
             context: Context.t,
+            container: t,
           ) => {
     /* Recycle any previous effect instances */
     let previousEffectInstances = _getEffectsFromInstance(previousInstance);
@@ -252,6 +284,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
         previousChildInstances,
         children,
         newContext,
+        container,
       );
 
     let instance: instance = {
@@ -263,6 +296,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       effectInstances,
       state: newState,
       context: newContext,
+      container: container,
     };
 
     /*
@@ -274,8 +308,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
     instance;
   }
-  and reconcile = (rootNode, instance, component, context) => {
-    let newInstance = instantiate(rootNode, instance, component, context);
+  and reconcile = (rootNode, instance, component, context, container) => {
+    let newInstance = instantiate(rootNode, instance, component, context, container);
 
     let r =
       switch (instance) {
@@ -305,6 +339,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
                       i.childInstances,
                       newInstance.children,
                       context,
+                      container,
                     );
                   i;
                 } else {
@@ -319,6 +354,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
                     i.childInstances,
                     newInstance.children,
                     context,
+                    container,
                   );
                 i;
               }
@@ -354,6 +390,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
         currentChildInstances: childInstances,
         newChildren: list(component),
         context: Context.t,
+        container: t,
       ) => {
     let currentChildInstances: array(instance) =
       Array.of_list(currentChildInstances);
@@ -367,7 +404,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
           None : Some(currentChildInstances[i]);
       let childComponent = newChildren[i];
       let newChildInstance =
-        reconcile(root, childInstance, childComponent, context);
+        reconcile(root, childInstance, childComponent, context, container);
       newChildInstances :=
         List.append(newChildInstances^, [newChildInstance]);
     };
@@ -400,7 +437,9 @@ module Make = (ReconcilerImpl: Reconciler) => {
       switch (context^) {
       | Some(i) =>
         let {rootNode, component, _} = i;
-        let _ = reconcile(rootNode, Some(i), component, i.context);
+        Event.dispatch(i.container.onBeginReconcile, rootNode);
+        let _ = reconcile(rootNode, Some(i), component, i.context, i.container);
+        Event.dispatch(i.container.onEndReconcile, rootNode);
         ();
       | _ => print_endline("WARNING: Skipping reconcile!")
       };
@@ -410,11 +449,13 @@ module Make = (ReconcilerImpl: Reconciler) => {
   };
 
   let updateContainer = (container, component) => {
-    let {rootNode, rootInstance} = container;
+    let {containerNode, rootInstance, onBeginReconcile, onEndReconcile} = container;
     let prevInstance = rootInstance^;
+    Event.dispatch(onBeginReconcile, containerNode);
     let nextInstance =
-      reconcile(rootNode, prevInstance, component, noContext);
+      reconcile(containerNode, prevInstance, component, noContext, container);
     rootInstance := Some(nextInstance);
+    Event.dispatch(onEndReconcile, containerNode);
   };
 };
 
