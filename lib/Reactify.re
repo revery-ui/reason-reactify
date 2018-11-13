@@ -19,8 +19,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
      a function of type unit => elementWithChildren ?
    */
   and component = {
-      element,
-      render: unit => elementWithChildren
+    element,
+    render: unit => elementWithChildren,
   }
   and childComponents = list(component)
   /*
@@ -29,7 +29,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       effects that need to be run, and corresponding nodes.
    */
   and instance = {
-    component,
+    mutable component,
     children: childComponents,
     node: option(ReconcilerImpl.node),
     rootNode: ReconcilerImpl.node,
@@ -127,9 +127,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   let empty: component = {
     element: Component,
-    render: () => {
-        (Component, [], [], __globalContext^)
-    },
+    render: () => (Component, [], [], __globalContext^),
   };
 
   let component = (~children: childComponents=[], c: componentFunction) => {
@@ -154,8 +152,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   let primitiveComponent = (~children, prim) => {
     let comp: component = {
-        element: Primitive(prim),
-        render: () => (Primitive(prim), children, [], __globalContext^)
+      element: Primitive(prim),
+      render: () => (Primitive(prim), children, [], __globalContext^),
     };
     comp;
   };
@@ -333,16 +331,16 @@ module Make = (ReconcilerImpl: Reconciler) => {
                 /* Check if the primitive type is the same - if it is, we can simply update the node */
                 /* If not, we'll replace the node */
                 if (Utility.areConstructorsEqual(oldPrim, newPrim)) {
-                    ReconcilerImpl.updateInstance(b, oldPrim, newPrim);
-                    i.childInstances =
-                      reconcileChildren(
-                        b,
-                        i.childInstances,
-                        newInstance.children,
-                        context,
-                        container
-                      );
-                    i;
+                  ReconcilerImpl.updateInstance(b, oldPrim, newPrim);
+                  i.component = newInstance.component;
+                  i.childInstances =
+                    reconcileChildren(
+                      b,
+                      i.childInstances,
+                      newInstance.children,
+                      context,
+                    );
+                  i;
                 } else {
                   ReconcilerImpl.replaceChild(rootNode, a, b);
                   newInstance;
