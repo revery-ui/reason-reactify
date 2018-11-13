@@ -60,7 +60,8 @@ module type React = {
   /*
        Container API
    */
-  let createContainer: node => t;
+  type reconcileNotification = node => unit;
+  let createContainer: (~onBeginReconcile:reconcileNotification=?, ~onEndReconcile:reconcileNotification=?, node) => t;
   let updateContainer: (t, component) => unit;
 
   /*
