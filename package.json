@@ -13,7 +13,8 @@
     "@esy-ocaml/reason": "*",
     "ocaml": "~4.6.0",
     "refmterr": "*",
-    "@opam/lambda-term": "^1.11.0"
+    "@opam/lambda-term": "^1.11.0",
+    "rejest": "^1.1.0"
   },
   "resolutions": {
     "@esy-ocaml/esy-installer": "0.0.1",
