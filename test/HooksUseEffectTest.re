@@ -29,6 +29,22 @@ let componentWithEffectOnMount =
 
       <bComponent />;
     },
+    ~uniqueId="componentWithEffectOnMount",
+    ~children,
+  );
+
+let componentWithEmptyConditionalEffect =
+    (~children, ~functionToCallOnMount, ~functionToCallOnUnmount, ()) =>
+  TestReact.component(
+    () => {
+      TestReact.useEffect(~condition=MountUnmount, () => {
+        functionToCallOnMount();
+        () => functionToCallOnUnmount();
+      });
+
+      <bComponent />;
+    },
+    ~uniqueId="componentWithEmptyConditionalEffect",
     ~children,
   );
 
@@ -81,5 +97,55 @@ test("useEffect", () => {
     validateStructure(rootNode, expectedStructure);
     assert(v^ == 1);
     assert(r^ == 1);
+  });
+
+  test("useEffect without a condition is called for each render", () => {
+    let rootNode = createRootNode();
+    let container = TestReact.createContainer(rootNode);
+
+    let v = ref(0);
+    let mutate = () => v := v^ + 1;
+
+    TestReact.updateContainer(
+      container,
+      <componentWithEffectOnMount
+        functionToCallOnMount=mutate
+        functionToCallOnUnmount=noop
+      />,
+    );
+    TestReact.updateContainer(
+      container,
+      <componentWithEffectOnMount
+        functionToCallOnMount=mutate
+        functionToCallOnUnmount=noop
+      />,
+    );
+
+    assert(v^ == 2);
+  });
+
+  test("useEffect with an empty condition is called only once", () => {
+    let rootNode = createRootNode();
+    let container = TestReact.createContainer(rootNode);
+
+    let v = ref(0);
+    let mutate = () => v := v^ + 1;
+
+    TestReact.updateContainer(
+      container,
+      <componentWithEmptyConditionalEffect
+        functionToCallOnMount=mutate
+        functionToCallOnUnmount=noop
+      />,
+    );
+    TestReact.updateContainer(
+      container,
+      <componentWithEmptyConditionalEffect
+        functionToCallOnMount=mutate
+        functionToCallOnUnmount=noop
+      />,
+    );
+
+    expect(v^).toBe(1);
   });
 });

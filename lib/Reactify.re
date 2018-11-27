@@ -3,7 +3,7 @@ open Reactify_Types;
 module Make = (ReconcilerImpl: Reconciler) => {
   type element =
     | Primitive(ReconcilerImpl.primitives)
-    | Component(componentFunction)
+    | Component(string)
     | Provider
     | Empty
   and renderedElement =
@@ -11,7 +11,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
   and elementWithChildren = (
     element,
     childComponents,
-    list(effect),
+    Effects.effects,
     Context.t,
   )
   /*
@@ -50,16 +50,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
     containerNode: ReconcilerImpl.node,
   }
   and t = container
-  and childInstances = list(instance)
-  /*
-     An effectInstance is an effect that was already instantiated -
-     it's an effect we'll have to run when the element is unmounted
-   */
-  and effectInstance = unit => unit
-  and effectInstances = list(effectInstance)
-  /* An effect is a function sent to useEffect. We haven't run it yet, */
-  /* But we will once the element is mounted */
-  and effect = unit => effectInstance;
+  and childInstances = list(instance);
 
   type stateUpdateFunction('t) = 't => unit;
   type stateResult('t) = ('t, stateUpdateFunction('t));
@@ -126,22 +117,21 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   };
 
-
   let empty: component = {
     element: Empty,
     render: () => (Empty, [], [], __globalContext^),
   };
 
-  let component = (~children: childComponents=[], c: componentFunction) => {
+  let component = (~children: childComponents=[], ~uniqueId:string, c: componentFunction) => {
     let ret: component = {
-      element: Component(c),
+      element: Component(uniqueId),
       render: () => {
         Effects.resetEffects(__globalEffects);
         let _dummy = children;
         let children: list(component) = [c()];
         let effects = Effects.getEffects(__globalEffects);
         let renderResult: elementWithChildren = (
-          Component(c),
+          Component(uniqueId),
           children,
           effects,
           __globalContext^,
@@ -198,7 +188,10 @@ module Make = (ReconcilerImpl: Reconciler) => {
     | None => ctx.initialValue
     };
 
-  let useEffect = (e: effect) => Effects.addEffect(__globalEffects, e);
+  let useEffect = (~condition:Effects.effectCondition=Effects.Always, e: Effects.effectFunction) => {
+        Effects.addEffect(~condition=condition, __globalEffects, e);
+        ();
+  };
 
   let _getEffectsFromInstance = (instance: option(instance)) =>
     switch (instance) {
@@ -259,9 +252,11 @@ module Make = (ReconcilerImpl: Reconciler) => {
         
     /* Recycle any previous effect instances */
     let previousEffectInstances = _getEffectsFromInstance(previousInstance);
-    Effects.runEffectInstances(previousEffectInstances);
+    /* Effects.runEffectInstances(previousEffectInstances); */
 
-    if (isInstanceOfComponent(previousInstance, component)) {
+    let isSameInstanceAsBefore = isInstanceOfComponent(previousInstance, component)
+
+    if (isSameInstanceAsBefore) {
         /* Set up state for the component */
         previousState := _getCurrentStateFromInstance(previousInstance);
     }
@@ -283,8 +278,18 @@ module Make = (ReconcilerImpl: Reconciler) => {
     __globalState := noState;
     let newState = ComponentState.getNewState(state);
 
-    /* TODO: Should this be deferred until we actually mount the component? */
-    let effectInstances = Effects.runEffects(effects);
+    let newEffectCount = List.length(effects);
+
+    let newEffectInstances = switch (isSameInstanceAsBefore) {
+    | true => {
+        Effects.runEffects(~previousInstances=previousEffectInstances, effects);    
+    }
+    | false => {
+        Effects.drainEffects(previousEffectInstances);
+        let emptyInstances = Effects.createEmptyEffectInstances(newEffectCount);
+        Effects.runEffects(~previousInstances=emptyInstances, effects);
+        }
+    }
 
     let primitiveInstance =
       switch (element) {
@@ -314,7 +319,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       rootNode: nextRootPrimitiveInstance,
       children,
       childInstances,
-      effectInstances,
+      effectInstances: newEffectInstances,
       state: newState,
       context: newContext,
       container: container,
@@ -354,6 +359,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
                 if (Utility.areConstructorsEqual(oldPrim, newPrim)) {
                   ReconcilerImpl.updateInstance(b, oldPrim, newPrim);
                   i.component = newInstance.component;
+                  i.effectInstances = newInstance.effectInstances;
                   i.childInstances =
                     reconcileChildren(
                       b,
@@ -369,6 +375,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
                 };
               } else {
                 /* The node itself is unchanged, so we'll just reconcile the children */
+                i.effectInstances = newInstance.effectInstances;
                 i.childInstances =
                   reconcileChildren(
                     b,

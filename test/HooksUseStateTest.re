@@ -24,6 +24,7 @@ let componentWithState = (~children, ()) =>
       let (s, _setS) = TestReact.useState(2);
       <aComponent testVal=s />;
     },
+    ~uniqueId="componentWithState",
     ~children,
   );
 
@@ -58,6 +59,7 @@ test("useState", () => {
 
         <aComponent testVal=s />;
       },
+      ~uniqueId="componentThatUpdatesState",
       ~children,
     );
 
@@ -101,6 +103,28 @@ test("useState", () => {
     validateStructure(rootNode, expectedStructure);
   });
 
+  test("useState set state persists across renders", () => {
+    let rootNode = createRootNode();
+
+    let container = TestReact.createContainer(rootNode);
+
+    let event: Event.t(int) = Event.create();
+
+    TestReact.updateContainer(container, <componentThatUpdatesState event />);
+
+    Event.dispatch(event, 5);
+
+    let expectedStructure: tree(primitives) =
+      TreeNode(Root, [TreeLeaf(A(5))]);
+    validateStructure(rootNode, expectedStructure);
+
+    TestReact.updateContainer(container, <componentThatUpdatesState event />);
+
+    let expectedStructure: tree(primitives) =
+      TreeNode(Root, [TreeLeaf(A(5))]);
+    validateStructure(rootNode, expectedStructure);
+  });
+
   test("useState can update multiple times", () => {
     let rootNode = createRootNode();
     let container = TestReact.createContainer(rootNode);
@@ -139,6 +163,7 @@ test("useState", () => {
 
         <aComponent testVal=s> ...children </aComponent>;
       },
+      ~uniqueId="componentThatUpdatesStateAndRendersChildren",
       ~children,
     );
 
@@ -193,6 +218,7 @@ test("useState", () => {
         | AComponent(x) => <aComponent testVal=x />
         };
       },
+      ~uniqueId="componentThatWrapsEitherPrimitiveOrComponent",
       ~children,
     );
 
