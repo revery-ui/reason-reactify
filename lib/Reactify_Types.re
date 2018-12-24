@@ -40,7 +40,7 @@ module type React = {
     | Provider(render)
     | Empty(render)
   and componentFunction = unit => component
-  and childComponents = list(component)
+  and childComponents = list(component);
 
   type t;
 
