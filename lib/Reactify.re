@@ -2,29 +2,15 @@ open Reactify_Types;
 
 module Make = (ReconcilerImpl: Reconciler) => {
   /* Module to give us unique IDs for components */
-  type element =
-    | Primitive(ReconcilerImpl.primitives)
-    | Component(ComponentId.t)
-    | Provider
-    | Empty
-  and renderedElement =
+  type renderedElement =
     | RenderedPrimitive(ReconcilerImpl.node)
-  and elementWithChildren = (
-    element,
-    childComponents,
-    Effects.effects,
-    Context.t,
-  )
-  /*
-     A component is our JSX primitive element - just an object
-     with a render method.
-     TODO: Can we clean this interface up and just make component
-     a function of type unit => elementWithChildren ?
-   */
-  and component = {
-    element,
-    render: unit => elementWithChildren,
-  }
+  and elementWithChildren = (childComponents, Effects.effects, Context.t)
+  and render = unit => elementWithChildren
+  and component =
+    | Primitive(ReconcilerImpl.primitives, render)
+    | Component(ComponentId.t, render)
+    | Provider(render)
+    | Empty(render)
   and componentFunction = unit => component
   and childComponents = list(component)
   /*
@@ -118,30 +104,27 @@ module Make = (ReconcilerImpl: Reconciler) => {
     ret;
   };
 
-  let empty: component = {
-    element: Empty,
-    render: () => (Empty, [], [], __globalContext^),
-  };
+  let empty: component = Empty(() => ([], [], __globalContext^));
 
   type renderFunction =
     (~children: list(component)=?, componentFunction) => component;
   let render = (id: ComponentId.t, ~children: option(list(component))=?, c) => {
     ignore(children);
-    let ret: component = {
-      element: Component(id),
-      render: () => {
-        Effects.resetEffects(__globalEffects);
-        let children: list(component) = [c()];
-        let effects = Effects.getEffects(__globalEffects);
-        let renderResult: elementWithChildren = (
-          Component(id),
-          children,
-          effects,
-          __globalContext^,
-        );
-        renderResult;
-      },
-    };
+    let ret: component =
+      Component(
+        id,
+        () => {
+          Effects.resetEffects(__globalEffects);
+          let children: list(component) = [c()];
+          let effects = Effects.getEffects(__globalEffects);
+          let renderResult: elementWithChildren = (
+            children,
+            effects,
+            __globalContext^,
+          );
+          renderResult;
+        },
+      );
     ret;
   };
 
@@ -164,10 +147,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
   };
 
   let primitiveComponent = (~children, prim) => {
-    let comp: component = {
-      element: Primitive(prim),
-      render: () => (Primitive(prim), children, [], __globalContext^),
-    };
+    let comp: component =
+      Primitive(prim, () => (children, [], __globalContext^));
     comp;
   };
 
@@ -189,15 +170,15 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   let getProvider = ctx => {
     let provider = (~children, ~value, ()) => {
-      let ret: component = {
-        element: Provider,
-        render: () => {
-          let contextId = ctx.id;
-          let context = Context.clone(__globalContext^);
-          Context.set(context, contextId, Object.to_object(value));
-          (Provider, children, [], context);
-        },
-      };
+      let ret: component =
+        Provider(
+          () => {
+            let contextId = ctx.id;
+            let context = Context.clone(__globalContext^);
+            Context.set(context, contextId, Object.to_object(value));
+            (children, [], context);
+          },
+        );
       ret;
     };
     provider;
@@ -252,10 +233,11 @@ module Make = (ReconcilerImpl: Reconciler) => {
     switch (instance) {
     | None => false
     | Some(x) =>
-      switch (x.component.element, component.element) {
-      | (Primitive(a), Primitive(b)) => Utility.areConstructorsEqual(a, b)
-      | (Component(a), Component(b)) => a === b
-      | _ => x.component.element == component.element
+      switch (x.component, component) {
+      | (Primitive(a, _), Primitive(b, _)) =>
+        Utility.areConstructorsEqual(a, b)
+      | (Component(a, _), Component(b, _)) => a === b
+      | _ => x.component === component
       }
     };
 
@@ -295,7 +277,13 @@ module Make = (ReconcilerImpl: Reconciler) => {
      */
     __globalState := state;
     __globalContext := context;
-    let (element, children, effects, newContext) = component.render();
+    let (children, effects, newContext) =
+      switch (component) {
+      | Primitive(_, render)
+      | Component(_, render)
+      | Provider(render)
+      | Empty(render) => render()
+      };
     /* Once rendering is complete, we don't need this anymore */
     __globalContext := noContext;
     __globalState := noState;
@@ -317,8 +305,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
         };
 
     let primitiveInstance =
-      switch (element) {
-      | Primitive(p) => Some(ReconcilerImpl.createInstance(p))
+      switch (component) {
+      | Primitive(p, _render) => Some(ReconcilerImpl.createInstance(p))
       | _ => None
       };
 
@@ -377,8 +365,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
           switch (newInstance.node, i.node) {
           | (Some(a), Some(b)) =>
             /* Only both replacing node if the primitives are different */
-            switch (newInstance.component.element, i.component.element) {
-            | (Primitive(newPrim), Primitive(oldPrim)) =>
+            switch (newInstance.component, i.component) {
+            | (Primitive(newPrim, _), Primitive(oldPrim, _)) =>
               if (oldPrim !== newPrim) {
                 /* Check if the primitive type is the same - if it is, we can simply update the node */
                 /* If not, we'll replace the node */

@@ -30,31 +30,17 @@ module type React = {
   type primitives;
   type node;
 
-  type element =
-    | Primitive(primitives)
-    | Component(ComponentId.t)
-    | Provider
-    | Empty
-  and renderedElement =
+  type renderedElement =
     | RenderedPrimitive(node)
-  and elementWithChildren = (
-    element,
-    childComponents,
-    Effects.effects,
-    Context.t,
-  )
-  /*
-     A component is our JSX primitive element - just an object
-     with a render method.
-     TODO: Can we clean this interface up and just make component
-     a function of type unit => elementWithChildren ?
-   */
-  and component = {
-    element,
-    render: unit => elementWithChildren,
-  }
+  and elementWithChildren = (childComponents, Effects.effects, Context.t)
+  and render = unit => elementWithChildren
+  and component =
+    | Primitive(primitives, render)
+    | Component(ComponentId.t, render)
+    | Provider(render)
+    | Empty(render)
   and componentFunction = unit => component
-  and childComponents = list(component);
+  and childComponents = list(component)
 
   type t;
 
