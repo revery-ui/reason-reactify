@@ -152,17 +152,19 @@ module CounterButtons = (
 module Clock = (
   val component((render, ~children, ()) =>
         render(
-          () => {
-            let (time, setTime) = useState(0.);
-            useEffect(() => {
-              let evt =
-                Lwt_engine.on_timer(1.0, true, _ => setTime(Unix.time()));
+          () =>
+            useState(
+              0.,
+              (time, setTime) => {
+                useEffect(() => {
+                  let evt =
+                    Lwt_engine.on_timer(1.0, true, _ => setTime(Unix.time()));
 
-              () => Lwt_engine.stop_event(evt);
-            });
-
-            <label text={"Time: " ++ string_of_float(time)} />;
-          },
+                  () => Lwt_engine.stop_event(evt);
+                });
+                <label text={"Time: " ++ string_of_float(time)} />;
+              },
+            ),
           ~children,
         )
       )

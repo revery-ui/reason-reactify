@@ -3,6 +3,11 @@
  * with a mutable back-end. Similiar in spirit
  * to the reconciler interface provided via 'react-conciler'.
  */
+
+type hook('t);
+type state('a);
+let addState: 't => hook(state('t)) = x => Obj.magic(x);
+
 module type Reconciler = {
   /*
       Primitives is a variant type describing metadata needed
@@ -91,7 +96,7 @@ module type React = {
   let useEffect:
     (~condition: Effects.effectCondition=?, Effects.effectFunction) => unit;
 
-  let useState: 'state => ('state, 'state => unit);
+  let useState: ('state, ('state, 'state => unit) => 'a) => hook(state('a));
 
   let useReducer:
     (('state, 'action) => 'state, 'state) => ('state, 'action => unit);

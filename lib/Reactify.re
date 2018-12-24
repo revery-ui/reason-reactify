@@ -499,11 +499,11 @@ module Make = (ReconcilerImpl: Reconciler) => {
     switch (action) {
     | SetState(newState) => newState
     };
-  let useState = initialState => {
+  let useState = (initialState, f) => {
     let (componentState, dispatch) =
       useReducer(useStateReducer, initialState);
     let setState = newState => dispatch(SetState(newState));
-    (componentState, setState);
+    addState(f(componentState, setState));
   };
 
   let updateContainer = (container, component) => {
