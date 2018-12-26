@@ -5,12 +5,16 @@ module Make = (ReconcilerImpl: Reconciler) => {
   type renderedElement =
     | RenderedPrimitive(ReconcilerImpl.node)
   and elementWithChildren = (childComponents, Effects.effects, Context.t)
-  and render = unit => elementWithChildren
+  and render = unit => component
+  and componentRender = unit => hook
   and component =
     | Primitive(ReconcilerImpl.primitives, render)
-    | Component(ComponentId.t, render)
+    | Component(ComponentId.t, componentRender)
     | Provider(render)
     | Empty(render)
+  and hook =
+    | SetState('a): hook
+    | Render(component): hook
   and componentFunction = unit => component
   and childComponents = list(component)
   /*
@@ -106,8 +110,14 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   let empty: component = Empty(() => ([], [], __globalContext^));
 
+  let _getComponentFromHook = (hook) => {
+      switch (hook) {
+      | Render(x) => x
+      }
+  };
+
   type renderFunction =
-    (~children: list(component)=?, componentFunction) => component;
+    (~children: list(component)=?, componentFunction) => hook;
   let render = (id: ComponentId.t, ~children: option(list(component))=?, c) => {
     ignore(children);
     let ret: component =
@@ -115,7 +125,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
         id,
         () => {
           Effects.resetEffects(__globalEffects);
-          let children: list(component) = [c()];
+          let hook = c();
+          let children: list(component) = [_getComponentFromHook(hook)];
           let effects = Effects.getEffects(__globalEffects);
           let renderResult: elementWithChildren = (
             children,
@@ -170,15 +181,15 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   let getProvider = ctx => {
     let provider = (~children, ~value, ()) => {
-      let ret: component =
-        Provider(
+      let ret: hook =
+        Render(Provider(
           () => {
             let contextId = ctx.id;
             let context = Context.clone(__globalContext^);
             Context.set(context, contextId, Object.to_object(value));
             (children, [], context);
           },
-        );
+        ));
       ret;
     };
     provider;

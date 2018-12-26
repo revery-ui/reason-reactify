@@ -33,12 +33,16 @@ module type React = {
   type renderedElement =
     | RenderedPrimitive(node)
   and elementWithChildren = (childComponents, Effects.effects, Context.t)
-  and render = unit => elementWithChildren
+  and render = unit => component
+  and componentRender = unit => hook
   and component =
     | Primitive(primitives, render)
-    | Component(ComponentId.t, render)
+    | Component(ComponentId.t, componentRender)
     | Provider(render)
     | Empty(render)
+  and hook =
+    | SetState('a): hook
+    | Render(component): hook
   and componentFunction = unit => component
   and childComponents = list(component);
 
@@ -77,7 +81,6 @@ module type React = {
   /*
        Component API
    */
-
   type providerConstructor('t) =
     (~children: childComponents, ~value: 't, unit) => component;
   type context('t);
