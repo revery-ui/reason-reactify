@@ -11,7 +11,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
     | Component(ComponentId.t, render)
     | Provider(render)
     | Empty(render)
-  and componentFunction('a) = unit => 'a
+  and componentFunction = unit => component
   and childComponents = list(component)
   /*
       An instance is a component that has been rendered.
@@ -110,8 +110,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   let empty: component = Empty(() => ([], [], __globalContext^));
 
-  type renderFunction('hook) =
-    (~children: list(component)=?, componentFunction('hook)) => component;
+  type renderFunction =
+    (~children: list(component)=?, componentFunction) => component;
   let render = (id: ComponentId.t, ~children: option(list(component))=?, c) => {
     ignore(children);
     let ret: component =
@@ -134,20 +134,18 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   module type Component = {
     type t;
-    type hook;
     /* let derp: unit => unit; */
     let createElement: t;
   };
 
-  type func('a, 'hook) = renderFunction('hook) => 'a;
+  type func('a) = renderFunction => 'a;
 
-  let component = (type a, type b, fn): (module Component with type t = a and type hook = b) => {
+  let component = (type a, fn): (module Component with type t = a) => {
     let id = ComponentId.newId(_uniqueIdScope);
     let boundFunc = fn(render(id));
     (module
      {
        type t = a;
-       type hook = b;
        let createElement = boundFunc;
      });
   };

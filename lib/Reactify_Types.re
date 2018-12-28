@@ -42,7 +42,7 @@ module type React = {
     | Component(ComponentId.t, render)
     | Provider(render)
     | Empty(render)
-  and componentFunction('hook) = unit => 'hook
+  and componentFunction = unit => component
   and childComponents = list(component);
 
   type t;
@@ -68,17 +68,16 @@ module type React = {
 
   module type Component = {
     type t;
-    type hook;
     let createElement: t;
   };
 
-  type renderFunction('hook) =
-    (~children: childComponents=?, componentFunction('hook)) => component;
-  type func('a, 'hook) = renderFunction('hook) => 'a;
+  type renderFunction =
+    (~children: childComponents=?, componentFunction) => component;
+  type func('a) = renderFunction => 'a;
 
   let component:
-    func('a, 'hook) =>
-    (module Component with type t = 'a and type hook = 'hook);
+    func('a) =>
+    (module Component with type t = 'a);
 
   /*
        Component API
