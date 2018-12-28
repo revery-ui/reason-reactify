@@ -4,10 +4,6 @@
  * to the reconciler interface provided via 'react-conciler'.
  */
 
-type hook('t);
-type state('a);
-let addState: 't => hook(state('t)) = x => Obj.magic(x);
-
 module type Reconciler = {
   /*
       Primitives is a variant type describing metadata needed
@@ -34,6 +30,8 @@ module type Reconciler = {
 module type React = {
   type primitives;
   type node;
+  type hook('t);
+  type state('a);
 
   type renderedElement =
     | RenderedPrimitive(node)
@@ -44,8 +42,11 @@ module type React = {
     | Component(ComponentId.t, render)
     | Provider(render)
     | Empty(render)
-  and componentFunction = unit => component
-  and childComponents = list(component);
+  and wrappedElement =
+    | Hook(component, hook('t)): wrappedElement
+    | Regular(component): wrappedElement
+  and componentFunction = unit => wrappedElement
+  and childComponents = list(wrappedElement);
 
   type t;
 
@@ -66,7 +67,7 @@ module type React = {
        Component creation API
    */
   let primitiveComponent:
-    (~children: childComponents, primitives) => component;
+    (~children: childComponents, primitives) => wrappedElement;
 
   module type Component = {
     type t;
@@ -96,7 +97,9 @@ module type React = {
   let useEffect:
     (~condition: Effects.effectCondition=?, Effects.effectFunction) => unit;
 
-  let useState: ('state, ('state, 'state => unit) => 'a) => hook(state('a));
+  let useState:
+    ('state, ('state, 'state => unit) => ('a, hook('h))) =>
+    ('a, hook(('h, state('state))));
 
   let useReducer:
     (('state, 'action) => 'state, 'state) => ('state, 'action => unit);
