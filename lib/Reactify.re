@@ -305,8 +305,9 @@ module Make = (ReconcilerImpl: Reconciler) => {
         };
 
     let primitiveInstance =
-      switch (component) {
-      | Primitive(p, _render) => Some(ReconcilerImpl.createInstance(p))
+      switch ((isSameInstanceAsBefore, component, previousInstance)) {
+      | (true, _, Some(i)) => i.node
+      | (false, Primitive(p, _render), _) => Some(ReconcilerImpl.createInstance(p))
       | _ => None
       };
 
