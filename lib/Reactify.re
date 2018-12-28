@@ -11,11 +11,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
     | Component(ComponentId.t, render)
     | Provider(render)
     | Empty(render)
-  and wrappedElement =
-    | Hook(component, hook('t)): wrappedElement
-    | Regular(component): wrappedElement
-  and componentFunction = unit => wrappedElement
-  and childComponents = list(wrappedElement)
+  and componentFunction('a) = unit => 'a
+  and childComponents = list(component)
   /*
       An instance is a component that has been rendered.
       We store some additional context for it, like the state,
@@ -45,9 +42,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   type node = ReconcilerImpl.node;
   type primitives = ReconcilerImpl.primitives;
-  let addState: (~state: 'state, 'a) => hook(state('state))) =
+  let addState: (~state: 'state, 'a) => hook(('a, state('state))) =
     (~state as _, x) => Obj.magic(x);
-  let wrapPrimitive = x => Regular(x);
 
   /*
      A global, non-pure container to hold effects
@@ -114,8 +110,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   let empty: component = Empty(() => ([], [], __globalContext^));
 
-  type renderFunction =
-    (~children: list(component)=?, componentFunction) => component;
+  type renderFunction('hook) =
+    (~children: list(component)=?, componentFunction('hook)) => component;
   let render = (id: ComponentId.t, ~children: option(list(component))=?, c) => {
     ignore(children);
     let ret: component =
@@ -138,18 +134,20 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   module type Component = {
     type t;
+    type hook;
     /* let derp: unit => unit; */
     let createElement: t;
   };
 
-  type func('a) = renderFunction => 'a;
+  type func('a, 'hook) = renderFunction('hook) => 'a;
 
-  let component = (type a, fn): (module Component with type t = a) => {
+  let component = (type a, type b, fn): (module Component with type t = a and type hook = b) => {
     let id = ComponentId.newId(_uniqueIdScope);
     let boundFunc = fn(render(id));
     (module
      {
        type t = a;
+       type hook = b;
        let createElement = boundFunc;
      });
   };
@@ -157,7 +155,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
   let primitiveComponent = (~children, prim) => {
     let comp: component =
       Primitive(prim, () => (children, [], __globalContext^));
-    wrapPrimitive(comp);
+    comp;
   };
 
   /* Context */
@@ -247,12 +245,6 @@ module Make = (ReconcilerImpl: Reconciler) => {
       | (Component(a, _), Component(b, _)) => a === b
       | _ => x.component === component
       }
-    };
-
-  let unwrapComponent = a =>
-    switch (a) {
-    | Hook(component, _) => component
-    | Regular(component) => component
     };
 
   /*
@@ -444,7 +436,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       (
         root: node,
         currentChildInstances: childInstances,
-        newChildren: list(wrappedElement),
+        newChildren: list(component),
         context: Context.t,
         container: t,
       ) => {
@@ -458,7 +450,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       let childInstance =
         i >= Array.length(currentChildInstances) ?
           None : Some(currentChildInstances[i]);
-      let childComponent = unwrapComponent(newChildren[i]);
+      let childComponent = newChildren[i];
       let newChildInstance =
         reconcile(root, childInstance, childComponent, context, container);
       newChildInstances :=
@@ -517,7 +509,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
     let (componentState, dispatch) =
       useReducer(useStateReducer, initialState);
     let setState = newState => dispatch(SetState(newState));
-    Hook(f(componentState, setState) |> addState(~state=initialState);
+    (f(componentState, setState) |> addState(~state=initialState));
   };
 
   let updateContainer = (container, component) => {
