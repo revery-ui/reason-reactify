@@ -368,9 +368,6 @@ module Make = (ReconcilerImpl: Reconciler) => {
             /* Only both replacing node if the primitives are different */
             switch (newInstance.component, i.component) {
             | (Primitive(newPrim, _), Primitive(oldPrim, _)) =>
-              if (oldPrim !== newPrim) {
-                /* Check if the primitive type is the same - if it is, we can simply update the node */
-                /* If not, we'll replace the node */
                 if (Utility.areConstructorsEqual(oldPrim, newPrim)) {
                   ReconcilerImpl.updateInstance(b, oldPrim, newPrim);
                   i.component = newInstance.component;
@@ -388,19 +385,6 @@ module Make = (ReconcilerImpl: Reconciler) => {
                   ReconcilerImpl.replaceChild(rootNode, a, b);
                   newInstance;
                 };
-              } else {
-                /* The node itself is unchanged, so we'll just reconcile the children */
-                i.effectInstances = newInstance.effectInstances;
-                i.childInstances =
-                  reconcileChildren(
-                    b,
-                    i.childInstances,
-                    newInstance.children,
-                    context,
-                    container,
-                  );
-                i;
-              }
             | _ =>
               print_endline(
                 "ERROR: Should only be nodes if there are primitives!",
