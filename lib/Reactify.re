@@ -381,10 +381,12 @@ module Make = (ReconcilerImpl: Reconciler) => {
                       container,
                     );
                   i;
-                } else {
+                } else if (a !== b) {
                   ReconcilerImpl.replaceChild(rootNode, a, b);
                   newInstance;
-                };
+                } else {
+                    i;
+                }
             | _ =>
               print_endline(
                 "ERROR: Should only be nodes if there are primitives!",
