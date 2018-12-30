@@ -18,7 +18,7 @@ let cComponent = (~children, ()) => primitiveComponent(C, ~children);
 let noop = () => ();
 
 module ComponentWithEffectOnMount = (
-  val component(
+  val createComponent(
         (
           render,
           ~children,
@@ -43,7 +43,7 @@ module ComponentWithEffectOnMount = (
 );
 
 module ComponentWithEmptyConditionalEffect = (
-  val component(
+  val createComponent(
         (
           render,
           ~children,

@@ -37,7 +37,7 @@ test("Container", () => {
   });
 
   module ComponentThatUpdatesState = (
-    val component((render, ~children, ~event: Event.t(int), ()) =>
+    val createComponent((render, ~children, ~event: Event.t(int), ()) =>
           render(
             () => {
               let (s, setS) = useState(2);

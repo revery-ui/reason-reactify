@@ -42,7 +42,7 @@ module type React = {
     | Component(ComponentId.t, render)
     | Provider(render)
     | Empty(render)
-  and componentFunction = unit => component
+  and primitiveComponent = (hook(unit), component)
   and childComponents = list(component);
 
   type t;
@@ -64,20 +64,17 @@ module type React = {
        Component creation API
    */
   let primitiveComponent:
-    (~children: childComponents, primitives) => component;
+    (~children: list(component), primitives) => component;
 
   module type Component = {
-    type t;
-    let createElement: t;
+    type hooks;
+    type createElement;
+    let createElement: createElement;
   };
 
-  type renderFunction =
-    (~children: childComponents=?, componentFunction) => component;
-  type func('a) = renderFunction => 'a;
-
-  let component:
-    func('a) =>
-    (module Component with type t = 'a);
+  let createComponent:
+    (('b, unit => component), component, 'a) =>
+    (module Component with type createElement = 'd and type hooks = 'e);
 
   /*
        Component API
@@ -97,7 +94,8 @@ module type React = {
     (~condition: Effects.effectCondition=?, Effects.effectFunction) => unit;
 
   let useState:
-    ('state, ('state, 'state => unit) => 'a) => hook(('a, state('state)));
+    ('state, ('state, 'state => unit) => (hook('a), 'b)) =>
+    (hook(('a, state('state))), 'b);
 
   let useReducer:
     (('state, 'action) => 'state, 'state) => ('state, 'action => unit);

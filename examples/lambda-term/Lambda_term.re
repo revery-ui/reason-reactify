@@ -141,7 +141,7 @@ let renderCounter = () => {
 };
 
 module CounterButtons = (
-  val component((render, ~children, ()) => render(renderCounter, ~children))
+  val createComponent((render, ~children, ()) => render(renderCounter, ~children))
 );
 /*
     Clock
@@ -150,7 +150,7 @@ module CounterButtons = (
     use of `useEffect` and `setState` together.
  */
 module Clock = (
-  val component((render, ~children, ()) =>
+  val createComponent((render, ~children, ()) =>
         render(
           () =>
             useState(

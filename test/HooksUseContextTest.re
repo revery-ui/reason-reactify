@@ -25,7 +25,7 @@ test("HooksUseContext", () => {
     let testContext = createContext(2);
 
     module ComponentThatUsesContext = (
-      val component((render, ~children, ()) =>
+      val createComponent((render, ~children, ()) =>
             render(
               () => {
                 let ctx = useContext(testContext);
@@ -52,7 +52,7 @@ test("HooksUseContext", () => {
     let provider = getProvider(testContext);
 
     module ComponentThatUsesContext = (
-      val component((render, ~children, ()) =>
+      val createComponent((render, ~children, ()) =>
             render(
               () => {
                 let ctx = useContext(testContext);
@@ -79,7 +79,7 @@ test("HooksUseContext", () => {
     let provider = getProvider(testContext);
 
     module ComponentThatUsesContext = (
-      val component((render, ~children, ()) =>
+      val createComponent((render, ~children, ()) =>
             render(
               () => {
                 let ctx = useContext(testContext);

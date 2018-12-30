@@ -11,7 +11,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
     | Component(ComponentId.t, render)
     | Provider(render)
     | Empty(render)
-  and componentFunction = unit => component
+  and primitiveComponent = (hook(unit), component)
   and childComponents = list(component)
   /*
       An instance is a component that has been rendered.
@@ -110,9 +110,12 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   let empty: component = Empty(() => ([], [], __globalContext^));
 
-  type renderFunction =
-    (~children: list(component)=?, componentFunction) => component;
-  let render = (id: ComponentId.t, ~children: option(list(component))=?, c) => {
+  let render =
+      (
+        id: ComponentId.t,
+        ~children: option(list(component))=?,
+        (_hooks, c),
+      ) => {
     ignore(children);
     let ret: component =
       Component(
@@ -133,26 +136,26 @@ module Make = (ReconcilerImpl: Reconciler) => {
   };
 
   module type Component = {
-    type t;
-    /* let derp: unit => unit; */
-    let createElement: t;
+    type hooks;
+    type createElement;
+    let createElement: createElement;
   };
 
-  type func('a) = renderFunction => 'a;
-
-  let component = (type a, fn): (module Component with type t = a) => {
+  let createComponent =
+      (type c, type h, create: (((h, unit => component)) => component) => c)
+      : (module Component with type createElement = c and type hooks = h) => {
     let id = ComponentId.newId(_uniqueIdScope);
-    let boundFunc = fn(render(id));
+    let boundFunc = create(render(id));
     (module
      {
-       type t = a;
+       type hooks = h;
+       type createElement = c;
        let createElement = boundFunc;
      });
   };
 
   let primitiveComponent = (~children, prim) => {
-    let comp: component =
-      Primitive(prim, () => (children, [], __globalContext^));
+    let comp = Primitive(prim, () => (children, [], __globalContext^));
     comp;
   };
 
@@ -507,7 +510,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
     let (componentState, dispatch) =
       useReducer(useStateReducer, initialState);
     let setState = newState => dispatch(SetState(newState));
-    (f(componentState, setState) |> addState(~state=initialState));
+    f(componentState, setState) |> addState(~state=initialState);
   };
 
   let updateContainer = (container, component) => {

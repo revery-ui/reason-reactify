@@ -18,7 +18,7 @@ let bComponent = (~children, ()) => primitiveComponent(B, ~children);
 let cComponent = (~children, ()) => primitiveComponent(C, ~children);
 
 module ComponentWithState = (
-  val component((render, ~children, ()) =>
+  val createComponent((render, ~children, ()) =>
         render(
           () => {
             /* Hooks */
@@ -51,7 +51,7 @@ test("useState", () => {
   });
 
   module ComponentThatUpdatesState = (
-    val component((render, ~children, ~event: Event.t(int), ()) =>
+    val createComponent((render, ~children, ~event: Event.t(int), ()) =>
           render(
             () => {
               /* Hooks */
@@ -157,7 +157,7 @@ test("useState", () => {
   });
 
   module ComponentThatUpdatesStateAndRendersChildren = (
-    val component((render, ~children, ~event: Event.t(int), ()) =>
+    val createComponent((render, ~children, ~event: Event.t(int), ()) =>
           render(
             () => {
               /* Hooks */
@@ -211,7 +211,7 @@ test("useState", () => {
   });
 
   module ComponentThatWrapsEitherPrimitiveOrComponent = (
-    val component((render, ~children, ~event: Event.t(renderOption), ()) =>
+    val createComponent((render, ~children, ~event: Event.t(renderOption), ()) =>
           render(
             () => {
               /* Hooks */

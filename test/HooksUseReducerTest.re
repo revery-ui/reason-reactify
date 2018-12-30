@@ -27,7 +27,7 @@ let reducer = (state, action) =>
   };
 
 module ComponentWithState = (
-  val component((render, ~children, ()) =>
+  val createComponent((render, ~children, ()) =>
         render(
           () => {
             /* Hooks */
@@ -60,7 +60,7 @@ test("useReducer", () => {
   });
 
   module ComponentThatDispatchesIncreaseAction = (
-    val component(
+    val createComponent(
           (render, ~children, ~event: Event.t(unit), ~initialValue: int, ()) =>
           render(
             () => {
@@ -183,7 +183,7 @@ test("useReducer", () => {
   });
 
   module ComponentThatDispatchesIncreaseActionAndRendersChildren = (
-    val component(
+    val createComponent(
           (render, ~children, ~event: Event.t(unit), ~initialValue: int, ()) =>
           render(
             () => {
