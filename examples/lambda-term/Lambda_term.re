@@ -130,15 +130,14 @@ let reducer = (state, action) =>
   | Decrement => state - 1
   };
 
-let renderCounter = () => {
-  let (count, dispatch) = useReducer(reducer, 0);
-
-  <hbox>
-    <button text="Decrement" onClick={() => dispatch(Decrement)} />
-    <label text={"Counter: " ++ string_of_int(count)} />
-    <button text="Increment" onClick={() => dispatch(Increment)} />
-  </hbox>;
-};
+let renderCounter = () =>
+  useReducer(reducer, 0, (count, dispatch) =>
+    <hbox>
+      <button text="Decrement" onClick={() => dispatch(Decrement)} />
+      <label text={"Counter: " ++ string_of_int(count)} />
+      <button text="Increment" onClick={() => dispatch(Increment)} />
+    </hbox>
+  );
 
 module CounterButtons = (
   val createComponent((render, ~children, ()) =>

@@ -37,7 +37,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
   and t = container
   and childInstances = list(instance)
   and hook('t)
-  and state('a)
+  and state('s)
+  and reducer('s, 'a)
   and effect;
 
   type node = ReconcilerImpl.node;
@@ -51,6 +52,11 @@ module Make = (ReconcilerImpl: Reconciler) => {
     (~state: 'state, (hook('t), 'a)) => (hook(('t, state('state))), 'a) =
     (~state as _, x) => Obj.magic(x);
   let addEffect: ((hook('t), 'a)) => (hook(('t, effect)), 'a) = Obj.magic;
+  let addReducer:
+    (~reducer: ('state, 'action) => 'state, (hook('t), 'a)) =>
+    (hook(('t, reducer('state, 'action))), 'a) =
+    (~reducer as _, x) => Obj.magic(x);
+  /* TODO: Can the tuple wrapping be avoided? */
   let elementToHook: 'a => (hook(unit), 'a) = x => Obj.magic((0, x));
 
   /*
@@ -499,8 +505,12 @@ module Make = (ReconcilerImpl: Reconciler) => {
     newChildInstances^;
   };
 
-  let useReducer =
-      (reducer: ('state, 'action) => 'state, initialState: 'state) => {
+  let _useReducer =
+      (
+        reducer: ('state, 'action) => 'state,
+        initialState: 'state,
+        continuation,
+      ) => {
     let globalState = __globalState^;
     let componentState =
       ComponentState.popOldState(globalState, initialState);
@@ -525,8 +535,16 @@ module Make = (ReconcilerImpl: Reconciler) => {
       };
     };
 
-    (componentState, dispatch(currentContext));
+    continuation(componentState, dispatch(currentContext));
   };
+
+  /*
+     There's an internal and a public version of `useReducer`. The internal version,
+     which has no "hooks types propagation", allows to keep the types in `useState`
+     (which reuses `useReducer`) simpler
+   */
+  let useReducer = (reducer, initialState, continuation) =>
+    _useReducer(reducer, initialState, continuation) |> addReducer(~reducer);
 
   type useStateAction('a) =
     | SetState('a);
@@ -534,12 +552,16 @@ module Make = (ReconcilerImpl: Reconciler) => {
     switch (action) {
     | SetState(newState) => newState
     };
-  let useState = (initialState, continuation) => {
-    let (componentState, dispatch) =
-      useReducer(useStateReducer, initialState);
-    let setState = newState => dispatch(SetState(newState));
-    continuation(componentState, setState) |> addState(~state=initialState);
-  };
+  let useState = (initialState, continuation) =>
+    _useReducer(
+      useStateReducer,
+      initialState,
+      (componentState, dispatch) => {
+        let setState = newState => dispatch(SetState(newState));
+        continuation(componentState, setState)
+        |> addState(~state=initialState);
+      },
+    );
 
   let updateContainer = (container, (_, component)) => {
     let {containerNode, rootInstance, onBeginReconcile, onEndReconcile} = container;

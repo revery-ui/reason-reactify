@@ -31,7 +31,8 @@ module type React = {
   type primitives;
   type node;
   type hook('t);
-  type state('a);
+  type state('s);
+  type reducer('s, 'a);
   type effect;
 
   type renderedElement =
@@ -108,5 +109,10 @@ module type React = {
     (hook(('a, state('state))), 'b);
 
   let useReducer:
-    (('state, 'action) => 'state, 'state) => ('state, 'action => unit);
+    (
+      ('state, 'action) => 'state,
+      'state,
+      ('state, 'action => unit) => (hook('a), 'b)
+    ) =>
+    (hook(('a, reducer('state, 'action))), 'b);
 };

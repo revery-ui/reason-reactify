@@ -29,13 +29,10 @@ let reducer = (state, action) =>
 module ComponentWithState = (
   val createComponent((render, ~children, ()) =>
         render(
-          () => {
-            /* Hooks */
-            let (s, _dispatch) = useReducer(reducer, 2);
-            /* End hooks */
-
-            <aComponent testVal=s />;
-          },
+          () =>
+            useReducer(reducer, 2, (s, _dispatch) =>
+              <aComponent testVal=s />
+            ),
           ~children,
         )
       )
@@ -63,20 +60,17 @@ test("useReducer", () => {
     val createComponent(
           (render, ~children, ~event: Event.t(unit), ~initialValue: int, ()) =>
           render(
-            () => {
-              /* Hooks */
-              let (s, dispatch) = useReducer(reducer, initialValue);
-              /* End hooks */
-
-              useEffect(
-                () => {
-                  let unsubscribe =
-                    Event.subscribe(event, () => dispatch(Increase));
-                  () => unsubscribe();
-                },
-                () => <aComponent testVal=s />,
-              );
-            },
+            () =>
+              useReducer(reducer, initialValue, (s, dispatch) =>
+                useEffect(
+                  () => {
+                    let unsubscribe =
+                      Event.subscribe(event, () => dispatch(Increase));
+                    () => unsubscribe();
+                  },
+                  () => <aComponent testVal=s />,
+                )
+              ),
             ~children,
           )
         )
@@ -187,18 +181,17 @@ test("useReducer", () => {
     val createComponent(
           (render, ~children, ~event: Event.t(unit), ~initialValue: int, ()) =>
           render(
-            () => {
-              let (s, dispatch) = useReducer(reducer, initialValue);
-
-              useEffect(
-                () => {
-                  let unsubscribe =
-                    Event.subscribe(event, () => dispatch(Increase));
-                  () => unsubscribe();
-                },
-                () => <aComponent testVal=s> ...children </aComponent>,
-              );
-            },
+            () =>
+              useReducer(reducer, initialValue, (s, dispatch) =>
+                useEffect(
+                  () => {
+                    let unsubscribe =
+                      Event.subscribe(event, () => dispatch(Increase));
+                    () => unsubscribe();
+                  },
+                  () => <aComponent testVal=s> ...children </aComponent>,
+                )
+              ),
             ~children,
           )
         )
