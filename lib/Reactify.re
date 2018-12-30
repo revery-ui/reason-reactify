@@ -41,9 +41,15 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   type node = ReconcilerImpl.node;
   type primitives = ReconcilerImpl.primitives;
+
+  /*
+     Internal helpers to aid the hooks type representation,
+     but at the same time avoid runtime costs
+   */
   let addState:
     (~state: 'state, (hook('t), 'a)) => (hook(('t, state('state))), 'a) =
     (~state as _, x) => Obj.magic(x);
+  let elementToHook: 'a => (hook(unit), 'a) = x => Obj.magic((0, x));
 
   /*
      A global, non-pure container to hold effects
@@ -109,13 +115,12 @@ module Make = (ReconcilerImpl: Reconciler) => {
   };
 
   let empty: elementHook =
-    Obj.magic((0, Empty(() => ([], [], __globalContext^))));
+    elementToHook(Empty(() => ([], [], __globalContext^)));
 
   let render = (id: ComponentId.t, lazyElement, ~children) => {
     ignore(children);
-    let ret: (hook(unit), 'a) =
-      Obj.magic((
-        0,
+    let ret: elementHook =
+      elementToHook(
         Component(
           id,
           () => {
@@ -131,7 +136,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
             renderResult;
           },
         ),
-      ));
+      );
     ret;
   };
 
@@ -165,8 +170,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   let primitiveComponent = (~children, prim) => {
     let comp: elementHook =
-      Obj.magic((
-        0,
+      elementToHook(
         Primitive(
           prim,
           () => (
@@ -175,7 +179,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
             __globalContext^,
           ),
         ),
-      ));
+      );
     comp;
   };
 
@@ -198,8 +202,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
   let getProvider = ctx => {
     let provider = (~children, ~value, ()) => {
       let ret: elementHook =
-        Obj.magic((
-          0,
+        elementToHook(
           Provider(
             () => {
               let contextId = ctx.id;
@@ -208,7 +211,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
               (List.map(((_hook, c)) => c, children), [], context);
             },
           ),
-        ));
+        );
       ret;
     };
     provider;
