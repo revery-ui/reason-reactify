@@ -48,16 +48,14 @@ test("useState", () => {
     val createComponent((render, ~children, ~event: Event.t(int), ()) =>
           render(
             () =>
-              useState(
-                2,
-                (s, setS) => {
-                  useEffect(() => {
+              useState(2, (s, setS) =>
+                useEffect(
+                  () => {
                     let unsubscribe = Event.subscribe(event, v => setS(v));
                     () => unsubscribe();
-                  });
-
-                  <aComponent testVal=s />;
-                },
+                  },
+                  () => <aComponent testVal=s />,
+                )
               ),
             ~children,
           )
@@ -154,15 +152,14 @@ test("useState", () => {
     val createComponent((render, ~children, ~event: Event.t(int), ()) =>
           render(
             () =>
-              useState(
-                2,
-                (s, setS) => {
-                  useEffect(() => {
+              useState(2, (s, setS) =>
+                useEffect(
+                  () => {
                     let unsubscribe = Event.subscribe(event, v => setS(v));
                     () => unsubscribe();
-                  });
-                  <aComponent testVal=s> ...children </aComponent>;
-                },
+                  },
+                  () => <aComponent testVal=s> ...children </aComponent>,
+                )
               ),
             ~children,
           )
@@ -209,19 +206,19 @@ test("useState", () => {
           render(
             () =>
               /* Hooks */
-              useState(
-                RenderAComponentWithState,
-                (s, setS) => {
-                  useEffect(() => {
+              useState(RenderAComponentWithState, (s, setS) =>
+                useEffect(
+                  () => {
                     let unsubscribe = Event.subscribe(event, v => setS(v));
                     () => unsubscribe();
-                  });
-                  switch (s) {
-                  /* | Nothing => () */
-                  | RenderAComponentWithState => <ComponentWithState />
-                  | RenderAComponent(x) => <aComponent testVal=x />
-                  };
-                },
+                  },
+                  () =>
+                    switch (s) {
+                    /* | Nothing => () */
+                    | RenderAComponentWithState => <ComponentWithState />
+                    | RenderAComponent(x) => <aComponent testVal=x />
+                    },
+                )
               ),
             ~children,
           )

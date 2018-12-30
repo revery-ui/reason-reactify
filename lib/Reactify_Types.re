@@ -32,6 +32,7 @@ module type React = {
   type node;
   type hook('t);
   type state('a);
+  type effect;
 
   type renderedElement =
     | RenderedPrimitive(node)
@@ -95,7 +96,12 @@ module type React = {
   let empty: elementHook;
 
   let useEffect:
-    (~condition: Effects.effectCondition=?, Effects.effectFunction) => unit;
+    (
+      ~condition: Effects.effectCondition=?,
+      Effects.effectFunction,
+      unit => (hook('a), 'b)
+    ) =>
+    (hook(('a, effect)), 'b);
 
   let useState:
     ('state, ('state, 'state => unit) => (hook('a), 'b)) =>

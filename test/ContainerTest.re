@@ -44,12 +44,13 @@ test("Container", () => {
                 2,
                 (s, setS) => {
                   print_endline("Value: " ++ string_of_int(s));
-                  useEffect(() => {
-                    let unsubscribe = Event.subscribe(event, v => setS(v));
-                    () => unsubscribe();
-                  });
-
-                  <aComponent testVal=s />;
+                  useEffect(
+                    () => {
+                      let unsubscribe = Event.subscribe(event, v => setS(v));
+                      () => unsubscribe();
+                    },
+                    () => <aComponent testVal=s />,
+                  );
                 },
               ),
             ~children,

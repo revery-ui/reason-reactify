@@ -68,13 +68,14 @@ test("useReducer", () => {
               let (s, dispatch) = useReducer(reducer, initialValue);
               /* End hooks */
 
-              useEffect(() => {
-                let unsubscribe =
-                  Event.subscribe(event, () => dispatch(Increase));
-                () => unsubscribe();
-              });
-
-              <aComponent testVal=s />;
+              useEffect(
+                () => {
+                  let unsubscribe =
+                    Event.subscribe(event, () => dispatch(Increase));
+                  () => unsubscribe();
+                },
+                () => <aComponent testVal=s />,
+              );
             },
             ~children,
           )
@@ -187,17 +188,16 @@ test("useReducer", () => {
           (render, ~children, ~event: Event.t(unit), ~initialValue: int, ()) =>
           render(
             () => {
-              /* Hooks */
               let (s, dispatch) = useReducer(reducer, initialValue);
 
-              useEffect(() => {
-                let unsubscribe =
-                  Event.subscribe(event, () => dispatch(Increase));
-                () => unsubscribe();
-              });
-              /* End Hooks */
-
-              <aComponent testVal=s> ...children </aComponent>;
+              useEffect(
+                () => {
+                  let unsubscribe =
+                    Event.subscribe(event, () => dispatch(Increase));
+                  () => unsubscribe();
+                },
+                () => <aComponent testVal=s> ...children </aComponent>,
+              );
             },
             ~children,
           )
@@ -241,5 +241,4 @@ test("useReducer", () => {
       TreeNode(Root, [TreeNode(A(4), [TreeLeaf(A(13))])]);
     validateStructure(rootNode, expectedStructure);
   });
-
 });

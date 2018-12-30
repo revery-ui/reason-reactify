@@ -37,7 +37,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
   and t = container
   and childInstances = list(instance)
   and hook('t)
-  and state('a);
+  and state('a)
+  and effect;
 
   type node = ReconcilerImpl.node;
   type primitives = ReconcilerImpl.primitives;
@@ -49,6 +50,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
   let addState:
     (~state: 'state, (hook('t), 'a)) => (hook(('t, state('state))), 'a) =
     (~state as _, x) => Obj.magic(x);
+  let addEffect: ((hook('t), 'a)) => (hook(('t, effect)), 'a) = Obj.magic;
   let elementToHook: 'a => (hook(unit), 'a) = x => Obj.magic((0, x));
 
   /*
@@ -227,9 +229,10 @@ module Make = (ReconcilerImpl: Reconciler) => {
       (
         ~condition: Effects.effectCondition=Effects.Always,
         e: Effects.effectFunction,
+        continuation,
       ) => {
     Effects.addEffect(~condition, __globalEffects, e);
-    ();
+    continuation() |> addEffect;
   };
 
   let _getEffectsFromInstance = (instance: option(instance)) =>
@@ -531,11 +534,11 @@ module Make = (ReconcilerImpl: Reconciler) => {
     switch (action) {
     | SetState(newState) => newState
     };
-  let useState = (initialState, f) => {
+  let useState = (initialState, continuation) => {
     let (componentState, dispatch) =
       useReducer(useStateReducer, initialState);
     let setState = newState => dispatch(SetState(newState));
-    f(componentState, setState) |> addState(~state=initialState);
+    continuation(componentState, setState) |> addState(~state=initialState);
   };
 
   let updateContainer = (container, (_, component)) => {

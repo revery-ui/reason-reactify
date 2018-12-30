@@ -27,16 +27,14 @@ module ComponentWithEffectOnMount = (
           (),
         ) =>
         render(
-          () => {
-            /* Hooks */
-            useEffect(() => {
-              functionToCallOnMount();
-              () => functionToCallOnUnmount();
-            });
-            /* End Hooks */
-
-            <bComponent />;
-          },
+          () =>
+            useEffect(
+              () => {
+                functionToCallOnMount();
+                () => functionToCallOnUnmount();
+              },
+              () => <bComponent />,
+            ),
           ~children,
         )
       )
@@ -52,7 +50,7 @@ module ComponentWithEmptyConditionalEffect = (
           (),
         ) =>
         render(
-          () => {
+          () =>
             /* Hooks */
             useEffect(
               ~condition=MountUnmount,
@@ -60,11 +58,8 @@ module ComponentWithEmptyConditionalEffect = (
                 functionToCallOnMount();
                 () => functionToCallOnUnmount();
               },
-            );
-            /* End Hooks */
-
-            <bComponent />;
-          },
+              () => <bComponent />,
+            ),
           ~children,
         )
       )
