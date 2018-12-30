@@ -20,13 +20,7 @@ let cComponent = (~children, ()) => primitiveComponent(C, ~children);
 module ComponentWithState = (
   val createComponent((render, ~children, ()) =>
         render(
-          () => {
-            /* Hooks */
-            let (s, _setS) = useState(2);
-            /* End hooks */
-
-            <aComponent testVal=s />;
-          },
+          () => useState(2, (s, _setS) => <aComponent testVal=s />),
           ~children,
         )
       )
@@ -53,18 +47,18 @@ test("useState", () => {
   module ComponentThatUpdatesState = (
     val createComponent((render, ~children, ~event: Event.t(int), ()) =>
           render(
-            () => {
-              /* Hooks */
-              let (s, setS) = useState(2);
-              /* End hooks */
+            () =>
+              useState(
+                2,
+                (s, setS) => {
+                  useEffect(() => {
+                    let unsubscribe = Event.subscribe(event, v => setS(v));
+                    () => unsubscribe();
+                  });
 
-              useEffect(() => {
-                let unsubscribe = Event.subscribe(event, v => setS(v));
-                () => unsubscribe();
-              });
-
-              <aComponent testVal=s />;
-            },
+                  <aComponent testVal=s />;
+                },
+              ),
             ~children,
           )
         )
@@ -159,18 +153,17 @@ test("useState", () => {
   module ComponentThatUpdatesStateAndRendersChildren = (
     val createComponent((render, ~children, ~event: Event.t(int), ()) =>
           render(
-            () => {
-              /* Hooks */
-              let (s, setS) = useState(2);
-
-              useEffect(() => {
-                let unsubscribe = Event.subscribe(event, v => setS(v));
-                () => unsubscribe();
-              });
-              /* End Hooks */
-
-              <aComponent testVal=s> ...children </aComponent>;
-            },
+            () =>
+              useState(
+                2,
+                (s, setS) => {
+                  useEffect(() => {
+                    let unsubscribe = Event.subscribe(event, v => setS(v));
+                    () => unsubscribe();
+                  });
+                  <aComponent testVal=s> ...children </aComponent>;
+                },
+              ),
             ~children,
           )
         )
@@ -211,24 +204,25 @@ test("useState", () => {
   });
 
   module ComponentThatWrapsEitherPrimitiveOrComponent = (
-    val createComponent((render, ~children, ~event: Event.t(renderOption), ()) =>
+    val createComponent(
+          (render, ~children, ~event: Event.t(renderOption), ()) =>
           render(
-            () => {
+            () =>
               /* Hooks */
-              let (s, setS) = useState(RenderAComponentWithState);
-
-              useEffect(() => {
-                let unsubscribe = Event.subscribe(event, v => setS(v));
-                () => unsubscribe();
-              });
-              /* End Hook */
-
-              switch (s) {
-              /* | Nothing => () */
-              | RenderAComponentWithState => <ComponentWithState />
-              | RenderAComponent(x) => <aComponent testVal=x />
-              };
-            },
+              useState(
+                RenderAComponentWithState,
+                (s, setS) => {
+                  useEffect(() => {
+                    let unsubscribe = Event.subscribe(event, v => setS(v));
+                    () => unsubscribe();
+                  });
+                  switch (s) {
+                  /* | Nothing => () */
+                  | RenderAComponentWithState => <ComponentWithState />
+                  | RenderAComponent(x) => <aComponent testVal=x />
+                  };
+                },
+              ),
             ~children,
           )
         )

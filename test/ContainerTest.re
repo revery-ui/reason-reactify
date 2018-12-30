@@ -39,17 +39,19 @@ test("Container", () => {
   module ComponentThatUpdatesState = (
     val createComponent((render, ~children, ~event: Event.t(int), ()) =>
           render(
-            () => {
-              let (s, setS) = useState(2);
+            () =>
+              useState(
+                2,
+                (s, setS) => {
+                  print_endline("Value: " ++ string_of_int(s));
+                  useEffect(() => {
+                    let unsubscribe = Event.subscribe(event, v => setS(v));
+                    () => unsubscribe();
+                  });
 
-              print_endline("Value: " ++ string_of_int(s));
-              useEffect(() => {
-                let unsubscribe = Event.subscribe(event, v => setS(v));
-                () => unsubscribe();
-              });
-
-              <aComponent testVal=s />;
-            },
+                  <aComponent testVal=s />;
+                },
+              ),
             ~children,
           )
         )

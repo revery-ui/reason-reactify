@@ -172,10 +172,12 @@ test("StatelessComponentTest", () => {
 
   module ComponentWithVisibilityToggle = (
     val createComponent((render, ~visible=true, ~children, ()) =>
-          render(() =>
-            visible ?
-              <aComponent testVal=1> ...children </aComponent> :
-              TestReact.empty
+          render(
+            () =>
+              visible ?
+                <aComponent testVal=1> ...children </aComponent> :
+                TestReact.empty,
+            ~children,
           )
         )
   );
