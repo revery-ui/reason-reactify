@@ -163,7 +163,9 @@ let renderCounter = () => {
 };
 
 module CounterButtons = (
-  val createComponent((render, ~children, ()) => render(renderCounter, ~children))
+  val createComponent((render, ~children, ()) =>
+        render(renderCounter, ~children)
+      )
 );
 
 /* Create a container for our UI */

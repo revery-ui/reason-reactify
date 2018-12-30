@@ -4,22 +4,22 @@ module Make = (ReconcilerImpl: Reconciler) => {
   /* Module to give us unique IDs for components */
   type renderedElement =
     | RenderedPrimitive(ReconcilerImpl.node)
-  and elementWithChildren = (list(component), Effects.effects, Context.t)
+  and elementWithChildren = (list(element), Effects.effects, Context.t)
   and render = unit => elementWithChildren
-  and component =
+  and element =
     | Primitive(ReconcilerImpl.primitives, render)
     | Component(ComponentId.t, render)
     | Provider(render)
     | Empty(render)
-  and primitiveComponent = (hook(unit), component)
+  and elementHook = (hook(unit), element)
   /*
       An instance is a component that has been rendered.
       We store some additional context for it, like the state,
       effects that need to be run, and corresponding nodes.
    */
   and instance = {
-    mutable component,
-    children: list(component),
+    mutable element,
+    children: list(element),
     node: option(ReconcilerImpl.node),
     rootNode: ReconcilerImpl.node,
     mutable childInstances,
@@ -108,10 +108,10 @@ module Make = (ReconcilerImpl: Reconciler) => {
     ret;
   };
 
-  let empty: primitiveComponent =
+  let empty: elementHook =
     Obj.magic((0, Empty(() => ([], [], __globalContext^))));
 
-  let render = (id: ComponentId.t, c, ~children) => {
+  let render = (id: ComponentId.t, lazyElement, ~children) => {
     ignore(children);
     let ret: (hook(unit), 'a) =
       Obj.magic((
@@ -120,8 +120,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
           id,
           () => {
             Effects.resetEffects(__globalEffects);
-            let (_, child) = c();
-            let children = [child];
+            let (_hooks, childElement) = lazyElement();
+            let children = [childElement];
             let effects = Effects.getEffects(__globalEffects);
             let renderResult: elementWithChildren = (
               children,
@@ -147,8 +147,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
         type h,
         create:
           (
-            (unit => (h, component), ~children: list(primitiveComponent)) =>
-            primitiveComponent
+            (unit => (h, element), ~children: list(elementHook)) =>
+            elementHook
           ) =>
           c,
       )
@@ -164,7 +164,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
   };
 
   let primitiveComponent = (~children, prim) => {
-    let comp: primitiveComponent =
+    let comp: elementHook =
       Obj.magic((
         0,
         Primitive(
@@ -182,7 +182,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
   /* Context */
   let __contextId = ref(0);
   type providerConstructor('t) =
-    (~children: list(primitiveComponent), ~value: 't, unit) => primitiveComponent;
+    (~children: list(elementHook), ~value: 't, unit) => elementHook;
   type context('t) = {
     initialValue: 't,
     id: int,
@@ -197,7 +197,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
 
   let getProvider = ctx => {
     let provider = (~children, ~value, ()) => {
-      let ret: primitiveComponent =
+      let ret: elementHook =
         Obj.magic((
           0,
           Provider(
@@ -258,16 +258,15 @@ module Make = (ReconcilerImpl: Reconciler) => {
       }
     };
 
-  let isInstanceOfComponent =
-      (instance: option(instance), component: component) =>
+  let isInstanceOfComponent = (instance: option(instance), element: element) =>
     switch (instance) {
     | None => false
     | Some(x) =>
-      switch (x.component, component) {
+      switch (x.element, element) {
       | (Primitive(a, _), Primitive(b, _)) =>
         Utility.areConstructorsEqual(a, b)
       | (Component(a, _), Component(b, _)) => a === b
-      | _ => x.component === component
+      | _ => x.element === element
       }
     };
 
@@ -279,7 +278,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
           (
             rootNode,
             previousInstance: option(instance),
-            component: component,
+            element: element,
             context: Context.t,
             container: t,
           ) => {
@@ -289,7 +288,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
     let previousEffectInstances = _getEffectsFromInstance(previousInstance);
 
     let isSameInstanceAsBefore =
-      isInstanceOfComponent(previousInstance, component);
+      isInstanceOfComponent(previousInstance, element);
 
     if (isSameInstanceAsBefore) {
       /* Set up state for the component */
@@ -308,7 +307,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
     __globalState := state;
     __globalContext := context;
     let (children, effects, newContext) =
-      switch (component) {
+      switch (element) {
       | Primitive(_, render)
       | Component(_, render)
       | Provider(render)
@@ -335,7 +334,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
         };
 
     let primitiveInstance =
-      switch (component) {
+      switch (element) {
       | Primitive(p, _render) => Some(ReconcilerImpl.createInstance(p))
       | _ => None
       };
@@ -357,7 +356,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       );
 
     let instance: instance = {
-      component,
+      element,
       node: primitiveInstance,
       rootNode: nextRootPrimitiveInstance,
       children,
@@ -395,14 +394,14 @@ module Make = (ReconcilerImpl: Reconciler) => {
           switch (newInstance.node, i.node) {
           | (Some(a), Some(b)) =>
             /* Only both replacing node if the primitives are different */
-            switch (newInstance.component, i.component) {
+            switch (newInstance.element, i.element) {
             | (Primitive(newPrim, _), Primitive(oldPrim, _)) =>
               if (oldPrim !== newPrim) {
                 /* Check if the primitive type is the same - if it is, we can simply update the node */
                 /* If not, we'll replace the node */
                 if (Utility.areConstructorsEqual(oldPrim, newPrim)) {
                   ReconcilerImpl.updateInstance(b, oldPrim, newPrim);
-                  i.component = newInstance.component;
+                  i.element = newInstance.element;
                   i.effectInstances = newInstance.effectInstances;
                   i.childInstances =
                     reconcileChildren(
@@ -460,7 +459,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       (
         root: node,
         currentChildInstances: childInstances,
-        newChildren: list(component),
+        newChildren: list(element),
         context: Context.t,
         container: t,
       ) => {
@@ -510,10 +509,10 @@ module Make = (ReconcilerImpl: Reconciler) => {
       updateState(newVal);
       switch (context^) {
       | Some(i) =>
-        let {rootNode, component, _} = i;
+        let {rootNode, element, _} = i;
         Event.dispatch(i.container.onBeginReconcile, rootNode);
         let _ =
-          reconcile(rootNode, Some(i), component, i.context, i.container);
+          reconcile(rootNode, Some(i), element, i.context, i.container);
         Event.dispatch(i.container.onEndReconcile, rootNode);
         ();
       | _ => print_endline("WARNING: Skipping reconcile!")

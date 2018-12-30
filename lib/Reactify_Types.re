@@ -35,14 +35,14 @@ module type React = {
 
   type renderedElement =
     | RenderedPrimitive(node)
-  and elementWithChildren = (list(component), Effects.effects, Context.t)
+  and elementWithChildren = (list(element), Effects.effects, Context.t)
   and render = unit => elementWithChildren
-  and component =
+  and element =
     | Primitive(primitives, render)
     | Component(ComponentId.t, render)
     | Provider(render)
     | Empty(render)
-  and primitiveComponent = (hook(unit), component);
+  and elementHook = (hook(unit), element);
 
   type t;
 
@@ -57,13 +57,13 @@ module type React = {
       node
     ) =>
     t;
-  let updateContainer: (t, primitiveComponent) => unit;
+  let updateContainer: (t, elementHook) => unit;
 
   /*
        Component creation API
    */
   let primitiveComponent:
-    (~children: list(primitiveComponent), primitives) => primitiveComponent;
+    (~children: list(elementHook), primitives) => elementHook;
 
   module type Component = {
     type hooks;
@@ -72,22 +72,27 @@ module type React = {
   };
 
   let createComponent:
-    (((unit => ('a, component), ~children: list(primitiveComponent)) => primitiveComponent) => 'b) =>
-    (module Component with type createElement = 'b and type hooks = 'a);
+    (
+      (
+        (unit => ('h, element), ~children: list(elementHook)) => elementHook
+      ) =>
+      'c
+    ) =>
+    (module Component with type createElement = 'c and type hooks = 'h);
 
   /*
        Component API
    */
 
   type providerConstructor('t) =
-    (~children: list(primitiveComponent), ~value: 't, unit) => primitiveComponent;
+    (~children: list(elementHook), ~value: 't, unit) => elementHook;
   type context('t);
 
   let getProvider: context('t) => providerConstructor('t);
   let createContext: 't => context('t);
   let useContext: context('t) => 't;
 
-  let empty: primitiveComponent;
+  let empty: elementHook;
 
   let useEffect:
     (~condition: Effects.effectCondition=?, Effects.effectFunction) => unit;
