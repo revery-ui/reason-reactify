@@ -535,7 +535,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
       };
     };
 
-    continuation(componentState, dispatch(currentContext));
+    continuation((componentState, dispatch(currentContext)));
   };
 
   /*
@@ -556,9 +556,9 @@ module Make = (ReconcilerImpl: Reconciler) => {
     _useReducer(
       useStateReducer,
       initialState,
-      (componentState, dispatch) => {
+      ((componentState, dispatch)) => {
         let setState = newState => dispatch(SetState(newState));
-        continuation(componentState, setState)
+        continuation((componentState, setState))
         |> addState(~state=initialState);
       },
     );

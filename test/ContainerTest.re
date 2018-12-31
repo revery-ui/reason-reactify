@@ -42,7 +42,7 @@ test("Container", () => {
             () =>
               useState(
                 2,
-                (s, setS) => {
+                ((s, setS)) => {
                   print_endline("Value: " ++ string_of_int(s));
                   useEffect(
                     () => {

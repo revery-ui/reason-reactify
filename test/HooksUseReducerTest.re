@@ -30,7 +30,7 @@ module ComponentWithState = (
   val createComponent((render, ~children, ()) =>
         render(
           () =>
-            useReducer(reducer, 2, (s, _dispatch) =>
+            useReducer(reducer, 2, ((s, _dispatch)) =>
               <aComponent testVal=s />
             ),
           ~children,
@@ -61,7 +61,7 @@ test("useReducer", () => {
           (render, ~children, ~event: Event.t(unit), ~initialValue: int, ()) =>
           render(
             () =>
-              useReducer(reducer, initialValue, (s, dispatch) =>
+              useReducer(reducer, initialValue, ((s, dispatch)) =>
                 useEffect(
                   () => {
                     let unsubscribe =
@@ -182,7 +182,7 @@ test("useReducer", () => {
           (render, ~children, ~event: Event.t(unit), ~initialValue: int, ()) =>
           render(
             () =>
-              useReducer(reducer, initialValue, (s, dispatch) =>
+              useReducer(reducer, initialValue, ((s, dispatch)) =>
                 useEffect(
                   () => {
                     let unsubscribe =

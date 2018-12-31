@@ -20,7 +20,7 @@ let cComponent = (~children, ()) => primitiveComponent(C, ~children);
 module ComponentWithState = (
   val createComponent((render, ~children, ()) =>
         render(
-          () => useState(2, (s, _setS) => <aComponent testVal=s />),
+          () => useState(2, ((s, _setS)) => <aComponent testVal=s />),
           ~children,
         )
       )
@@ -48,7 +48,7 @@ test("useState", () => {
     val createComponent((render, ~children, ~event: Event.t(int), ()) =>
           render(
             () =>
-              useState(2, (s, setS) =>
+              useState(2, ((s, setS)) =>
                 useEffect(
                   () => {
                     let unsubscribe = Event.subscribe(event, v => setS(v));
@@ -152,7 +152,7 @@ test("useState", () => {
     val createComponent((render, ~children, ~event: Event.t(int), ()) =>
           render(
             () =>
-              useState(2, (s, setS) =>
+              useState(2, ((s, setS)) =>
                 useEffect(
                   () => {
                     let unsubscribe = Event.subscribe(event, v => setS(v));
@@ -206,7 +206,7 @@ test("useState", () => {
           render(
             () =>
               /* Hooks */
-              useState(RenderAComponentWithState, (s, setS) =>
+              useState(RenderAComponentWithState, ((s, setS)) =>
                 useEffect(
                   () => {
                     let unsubscribe = Event.subscribe(event, v => setS(v));

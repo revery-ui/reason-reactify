@@ -105,14 +105,14 @@ module type React = {
     (hook(('a, effect)), 'b);
 
   let useState:
-    ('state, ('state, 'state => unit) => (hook('a), 'b)) =>
+    ('state, (('state, 'state => unit)) => (hook('a), 'b)) =>
     (hook(('a, state('state))), 'b);
 
   let useReducer:
     (
       ('state, 'action) => 'state,
       'state,
-      ('state, 'action => unit) => (hook('a), 'b)
+      (('state, 'action => unit)) => (hook('a), 'b)
     ) =>
     (hook(('a, reducer('state, 'action))), 'b);
 };
