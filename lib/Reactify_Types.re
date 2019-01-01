@@ -34,6 +34,7 @@ module type React = {
   type state('s);
   type reducer('s, 'a);
   type effect;
+  type context('t);
 
   type renderedElement =
     | RenderedPrimitive(node)
@@ -88,11 +89,12 @@ module type React = {
 
   type providerConstructor('t) =
     (~children: list(elementHook), ~value: 't, unit) => elementHook;
-  type context('t);
+  type contextValue('t);
 
-  let getProvider: context('t) => providerConstructor('t);
-  let createContext: 't => context('t);
-  let useContext: context('t) => 't;
+  let getProvider: contextValue('t) => providerConstructor('t);
+  let createContext: 't => contextValue('t);
+  let useContext:
+    (contextValue('t), 't => (hook('a), 'b)) => (hook(('a, context('t))), 'b);
 
   let empty: elementHook;
 

@@ -39,7 +39,8 @@ module Make = (ReconcilerImpl: Reconciler) => {
   and hook('t)
   and state('s)
   and reducer('s, 'a)
-  and effect;
+  and effect
+  and context('t);
 
   type node = ReconcilerImpl.node;
   type primitives = ReconcilerImpl.primitives;
@@ -56,6 +57,9 @@ module Make = (ReconcilerImpl: Reconciler) => {
     (~reducer: ('state, 'action) => 'state, (hook('t), 'a)) =>
     (hook(('t, reducer('state, 'action))), 'a) =
     (~reducer as _, x) => Obj.magic(x);
+  let addContext:
+    (~value: 'value, (hook('t), 'a)) => (hook(('t, context('value))), 'a) =
+    (~value as _, x) => Obj.magic(x);
   /* TODO: Can the tuple wrapping be avoided? */
   let elementToHook: 'a => (hook(unit), 'a) = x => Obj.magic((0, x));
 
@@ -195,7 +199,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
   let __contextId = ref(0);
   type providerConstructor('t) =
     (~children: list(elementHook), ~value: 't, unit) => elementHook;
-  type context('t) = {
+  type contextValue('t) = {
     initialValue: 't,
     id: int,
   };
@@ -203,7 +207,7 @@ module Make = (ReconcilerImpl: Reconciler) => {
   let createContext = (initialValue: 't) => {
     let contextId = __contextId^;
     __contextId := __contextId^ + 1;
-    let ret: context('t) = {initialValue, id: contextId};
+    let ret: contextValue('t) = {initialValue, id: contextId};
     ret;
   };
 
@@ -225,11 +229,14 @@ module Make = (ReconcilerImpl: Reconciler) => {
     provider;
   };
 
-  let useContext = (ctx: context('t)) =>
-    switch (Context.get(__globalContext^, ctx.id)) {
-    | Some(x) => Object.of_object(x)
-    | None => ctx.initialValue
-    };
+  let useContext = (ctx: contextValue('t), continuation) => {
+    let value =
+      switch (Context.get(__globalContext^, ctx.id)) {
+      | Some(x) => Object.of_object(x)
+      | None => ctx.initialValue
+      };
+    continuation(value) |> addContext(~value);
+  };
 
   let useEffect =
       (
