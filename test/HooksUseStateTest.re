@@ -34,20 +34,10 @@ module ComponentWithState = (
       )
 );
 
-module ComponentThatRendersChildren = (
-    val component((render, ~children, ()) =>
-                  render(() => {
-                    <bComponent>...children</bComponent>                    
-                 }, ~children))
-);
-
 type renderOption =
   /* | Nothing */
   | RenderAComponentWithState
   | RenderAComponent(int);
-
-type innerEventCallback = int => unit;
-
 
 test("useState", () => {
   test("useState uses initial state", () => {
