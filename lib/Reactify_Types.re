@@ -3,6 +3,7 @@
  * with a mutable back-end. Similiar in spirit
  * to the reconciler interface provided via 'react-conciler'.
  */
+
 module type Reconciler = {
   /*
       Primitives is a variant type describing metadata needed
@@ -29,18 +30,22 @@ module type Reconciler = {
 module type React = {
   type primitives;
   type node;
+  type hook('t);
+  type state('s);
+  type reducer('s, 'a);
+  type effect;
+  type context('t);
 
   type renderedElement =
     | RenderedPrimitive(node)
-  and elementWithChildren = (childComponents, Effects.effects, Context.t)
+  and elementWithChildren = (list(element), Effects.effects, Context.t)
   and render = unit => elementWithChildren
-  and component =
+  and element =
     | Primitive(primitives, render)
     | Component(ComponentId.t, render)
     | Provider(render)
     | Empty(render)
-  and componentFunction = unit => component
-  and childComponents = list(component);
+  and elementHook = (hook(unit), element);
 
   type t;
 
@@ -55,44 +60,61 @@ module type React = {
       node
     ) =>
     t;
-  let updateContainer: (t, component) => unit;
+  let updateContainer: (t, elementHook) => unit;
 
   /*
        Component creation API
    */
   let primitiveComponent:
-    (~children: childComponents, primitives) => component;
+    (~children: list(elementHook), primitives) => elementHook;
 
   module type Component = {
-    type t;
-    let createElement: t;
+    type hooks;
+    type createElement;
+    let createElement: createElement;
   };
 
-  type renderFunction =
-    (~children: childComponents=?, componentFunction) => component;
-  type func('a) = renderFunction => 'a;
-
-  let component: func('a) => (module Component with type t = 'a);
+  let createComponent:
+    (
+      (
+        (unit => ('h, element), ~children: list(elementHook)) => elementHook
+      ) =>
+      'c
+    ) =>
+    (module Component with type createElement = 'c and type hooks = 'h);
 
   /*
        Component API
    */
 
   type providerConstructor('t) =
-    (~children: childComponents, ~value: 't, unit) => component;
-  type context('t);
+    (~children: list(elementHook), ~value: 't, unit) => elementHook;
+  type contextValue('t);
 
-  let getProvider: context('t) => providerConstructor('t);
-  let createContext: 't => context('t);
-  let useContext: context('t) => 't;
+  let getProvider: contextValue('t) => providerConstructor('t);
+  let createContext: 't => contextValue('t);
+  let useContext:
+    (contextValue('t), 't => (hook('a), 'b)) => (hook(('a, context('t))), 'b);
 
-  let empty: component;
+  let empty: elementHook;
 
   let useEffect:
-    (~condition: Effects.effectCondition=?, Effects.effectFunction) => unit;
+    (
+      ~condition: Effects.effectCondition=?,
+      Effects.effectFunction,
+      unit => (hook('a), 'b)
+    ) =>
+    (hook(('a, effect)), 'b);
 
-  let useState: 'state => ('state, 'state => unit);
+  let useState:
+    ('state, (('state, 'state => unit)) => (hook('a), 'b)) =>
+    (hook(('a, state('state))), 'b);
 
   let useReducer:
-    (('state, 'action) => 'state, 'state) => ('state, 'action => unit);
+    (
+      ('state, 'action) => 'state,
+      'state,
+      (('state, 'action => unit)) => (hook('a), 'b)
+    ) =>
+    (hook(('a, reducer('state, 'action))), 'b);
 };
