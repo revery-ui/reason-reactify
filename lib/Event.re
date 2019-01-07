@@ -9,7 +9,6 @@ let create = () => ref([]);
 let subscribe = (evt: t('a), f: cb('a)) => {
   evt := List.append(evt^, [f]);
   let unsubscribe = () => {
-    print_endline("unsubscribe");
     evt := List.filter(f => f !== f, evt^);
   };
   unsubscribe;
