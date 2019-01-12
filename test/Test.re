@@ -10,5 +10,6 @@ module HooksUseReducerTest = HooksUseReducerTest;
 module HooksUseStateTest = HooksUseStateTest;
 module HooksUseContextTest = HooksUseContextTest;
 module UtilityTest = UtilityTest;
+module Brisk_InitialTest = Brisk_InitialTest;
 
 Rejest.run();

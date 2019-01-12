@@ -1,6 +1,7 @@
 (executable
     (name Test)
     (libraries
+        brisk-core
         reactify
         rejest
             ))

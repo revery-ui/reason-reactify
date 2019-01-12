@@ -20,13 +20,15 @@
     "refmterr": "*",
     "@opam/lambda-term": "^1.11.0",
     "@opam/js_of_ocaml-compiler": "*",
-    "rejest": "^1.1.0"
+    "rejest": "^1.1.0",
+    "@brisk/core": "*"
   },
   "resolutions": {
     "@opam/cmdliner": "1.0.2",
     "@esy-ocaml/esy-installer": "0.0.1",
     "@opam/menhir": "20171013",
-    "@opam/re": "1.8.0"
+    "@opam/re": "1.8.0",
+    "@brisk/core": "link:D:/brisk/core"
   },
   "devDependencies": {
     "@esy-ocaml/merlin": "*"
